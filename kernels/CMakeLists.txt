@@ -39,3 +39,7 @@ add_library(cuda_kernels STATIC ${cuda_kernel_files})
 
 include_directories(lightseq/includes)
 target_link_libraries(cuda_kernels PUBLIC -lcublas)
+
+install(TARGETS cuda_kernels DESTINATION lib)
+install(PROGRAMS kernels.hpp DESTINATION include/kernels )
+install(PROGRAMS lightseq/includes/kernels.h DESTINATION include/kernels/lightseq)

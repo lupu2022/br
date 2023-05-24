@@ -2,7 +2,7 @@
 #define _ALL_KERNELS_HPP_
 
 #include <cublasLt.h>
-#include "lightseq/includes/kernels.h"
+#include "lightseq/kernels.h"
 
 namespace br { namespace cuda {
 
@@ -43,7 +43,6 @@ void LtSgemmBatched(cublasLtHandle_t ltHandle,
              int batchCount,
              void *workspace,
              size_t workspaceSize);
-
 
 }}
 
