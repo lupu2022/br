@@ -233,7 +233,7 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
 
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
+ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y) {
     if ( DT == DataType::Float ) {
         auto x = this;
         size_t batch = self->shape()[0] * self->shape()[1];
@@ -697,7 +697,7 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t var_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_, float eps) {
+ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t var_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_) {
     if ( DT == DataType::Float ) {
         cudaStream_t streams[] = {br::ComputingContext::cuda_stream, br::ComputingContext::cuda_stream};
 

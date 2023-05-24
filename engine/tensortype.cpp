@@ -75,9 +75,9 @@ ComputingReturn TensorType::op_linear(tensor_t self, tensor_t w, tensor_t b, ten
     op_check(ret, "linear");
 }
 
-ComputingReturn TensorType::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
+ComputingReturn TensorType::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y) {
     br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_layernorm(self, mean, var, scale, bias, y, eps);
+    auto ret = impl()->op_layernorm(self, mean, var, scale, bias, y);
     op_check(ret, "layernorm");
 }
 
@@ -128,9 +128,9 @@ std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self,
     return result;
 }
 
-ComputingReturn TensorType::op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t var, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din, float eps) {
+ComputingReturn TensorType::op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t var, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din) {
     br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_layernorm_backward(self, scale, bias, var, y, dscale, dbias, din, eps);
+    auto ret = impl()->op_layernorm_backward(self, scale, bias, var, y, dscale, dbias, din);
     op_check(ret, "layernorm_backward");
 }
 
