@@ -1,9 +1,28 @@
-if [ ! -d 'build' ]; then
-    mkdir build
-fi
+function clean {
+    rm -rf install build
+}
 
-cd build 
-cmake -DCMAKE_INSTALL_PREFIX=../install ../kernels && make && make install
-rm -f Makefile CMakeCache.txt
-cmake -DCMAKE_INSTALL_PREFIX=../install ../engine && make && make install
+function kernels {
+    if [ ! -d 'build' ]; then
+        mkdir build
+    fi
+    
+    cd build
+    cmake ../kernels -DCMAKE_INSTALL_PREFIX=../install
+    make
+    make install
+}
 
+function engine {
+    if [ ! -d 'build' ]; then
+        mkdir build
+    fi
+    
+    cd build
+    cmake ../engine -DCMAKE_INSTALL_PREFIX=../install
+    make
+    make install
+}
+
+
+$1

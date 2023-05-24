@@ -16,7 +16,8 @@ set(tt_files
     cuda_tensor.cpp
     cpu_tensor.cpp
     dag.cpp
-    nn.cpp)
+    nn.cpp
+    tokenizer.cpp)
 
 add_library(tensortype STATIC ${tt_files})
 
@@ -38,4 +39,5 @@ install(PROGRAMS
         cuda_tensor.hpp
         dag.hpp
         nn.hpp
+        tokenizer.hpp
         DESTINATION include/tensortype )

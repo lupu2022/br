@@ -1,0 +1,4 @@
+---
+ name:      "Bloomz-7b"
+ vocab:     "blommz.vocab"
+ layers:    30
