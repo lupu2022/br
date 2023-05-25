@@ -6,7 +6,6 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
-#include <variant>
 
 #include "common.hpp"
 #include "operators.hpp"
@@ -128,6 +127,7 @@ using cpu_fp16_t = CPUTensor<DataType::FP16>;
 using cpu_int_t = CPUTensor<DataType::Int>;
 using cuda_float_t = CUDATensor<DataType::Float>;
 using cuda_fp16_t = CUDATensor<DataType::FP16>;
+using cuda_int_t = CUDATensor<DataType::Int>;
 
 // TensorType is all you need
 struct TensorType: public TransformerComputing {
@@ -139,6 +139,7 @@ public:
     TensorType(cpu_fp16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::FP16), marker_(0), impl_(tensor) {};
     TensorType(cuda_fp16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::FP16), marker_(0), impl_(tensor) {};
     TensorType(cpu_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), marker_(0), impl_(tensor) {};
+    TensorType(cuda_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), marker_(0), impl_(tensor) {};
     virtual ~TensorType();
 
     // fast access
@@ -259,6 +260,7 @@ public:
     ComputingReturn op_fill(tensor_t self, float value) override;
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
     ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
     ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c) override;
     ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
@@ -301,12 +303,14 @@ private:
         CPU_INT,
         CUDA_FLOAT,
         CUDA_FP16,
+        CUDA_INT,
     };
     using TensorImpl =   std::variant<  cpu_float_t*,
                                         cpu_fp16_t*,
                                         cpu_int_t*,
                                         cuda_float_t*,
-                                        cuda_fp16_t* >;
+                                        cuda_fp16_t*,
+                                        cuda_int_t* >;
     TensorImpl impl_;
 };
 
@@ -314,6 +318,7 @@ tensor_t create_cuda_float(std::vector<size_t>& shape);
 tensor_t create_cpu_float(std::vector<size_t>& shape);
 tensor_t create_cuda_fp16(std::vector<size_t>& shape);
 tensor_t create_cpu_fp16(std::vector<size_t>& shape);
+tensor_t create_cuda_int(std::vector<size_t>& shape);
 tensor_t create_cpu_int(std::vector<size_t>& shape);
 
 } // end of namespace br

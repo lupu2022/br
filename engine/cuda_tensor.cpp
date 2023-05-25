@@ -1074,5 +1074,11 @@ tensor_t create_cuda_half(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
+tensor_t create_cuda_int(std::vector<size_t>& shape_) {
+    ShapeType shape(shape_);
+    CUDATensor<DataType::Int>* tensor = new CUDATensor<DataType::Int>(shape);
+    return std::make_shared<TensorType>(tensor, shape);
+}
+
 
 } // end of namespace br

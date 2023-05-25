@@ -1,6 +1,7 @@
 #ifndef _OPERATORS_HPP_
 #define _OPERATORS_HPP_
 
+#include <variant>
 #include <vector>
 #include <memory>
 
@@ -53,6 +54,9 @@ struct TransformerComputing {
         return OP_TODO_ERROR;
     }
     virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) {
         return OP_TODO_ERROR;
     }
     virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) {

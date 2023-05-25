@@ -15,6 +15,8 @@ struct CPUTensor : public TransformerComputing {
             mem_ = MemoryContext::alloc(shape.numel() * sizeof(float));
         } else if ( _DTYPE_ == DataType::Int ) {
             mem_ = MemoryContext::alloc(shape.numel() * sizeof(int));
+        } else if ( _DTYPE_ == DataType::FP16 ) {
+            mem_ = MemoryContext::alloc(shape.numel() * sizeof(short));
         } else {
             br_panic("Can't be here!");
         }
@@ -37,6 +39,8 @@ public:
     ComputingReturn op_copy(tensor_t self, tensor_t dst) override;
     ComputingReturn op_fill(tensor_t self, float value) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_) override;
+    ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
+
 private:
     void* mem_;
 

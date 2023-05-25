@@ -8,8 +8,8 @@ namespace br {
 struct Tokensizer {
     using id = int32_t;
     using token = std::string;
-
-    virtual std::vector<id> encode(const std::string& text, bool bos) = 0;
+    virtual ~Tokensizer() {}
+    virtual std::vector<id> encode(const std::string& text, bool bos = false) = 0;
     virtual std::string decode(const std::vector<id>& tokens) = 0;
 };
 

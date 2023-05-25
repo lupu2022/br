@@ -157,6 +157,12 @@ tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
+tensor_t create_cpu_fp16(std::vector<size_t>& shape_) {
+    ShapeType shape(shape_);
+    CPUTensor<DataType::FP16>* tensor = new CPUTensor<DataType::FP16>(shape);
+    return std::make_shared<TensorType>(tensor, shape);
+}
+
 tensor_t create_cpu_int(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CPUTensor<DataType::Int>* tensor = new CPUTensor<DataType::Int>(shape);

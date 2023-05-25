@@ -28,6 +28,10 @@ struct BloomzTokensizer : public Tokensizer {
         }
         fin.close();
     }
+    ~BloomzTokensizer() {
+
+    }
+
     virtual std::vector<id> encode(const std::string& text, bool bos) override {
         std::vector<id> res;
 
