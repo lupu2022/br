@@ -1068,7 +1068,7 @@ tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
-tensor_t create_cuda_half(std::vector<size_t>& shape_) {
+tensor_t create_cuda_fp16(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CUDATensor<DataType::FP16>* tensor = new CUDATensor<DataType::FP16>(shape);
     return std::make_shared<TensorType>(tensor, shape);

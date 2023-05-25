@@ -98,7 +98,7 @@ int CollectiveContext::now() {
 }
 
 /**************************************************************/
-const size_t MemoryContext::page_size = 4096;
+const size_t MemoryContext::page_size = 16;
 void* MemoryContext::root = nullptr;
 size_t MemoryContext::total_size = 0;
 size_t MemoryContext::currentp = 0;

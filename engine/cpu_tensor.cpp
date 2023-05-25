@@ -32,6 +32,14 @@ ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
         }
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::Int ) {
+        int32_t* dst = (int32_t *)data();
+        int32_t v = (int32_t)value;
+        for (size_t i = 0; i < self->items(); i++) {
+            dst[i] = v;
+        }
+        return OP_OK;
+    }
     if ( _DTYPE_ == DataType::FP16 ) {
         fp16_t* dst = (fp16_t *)data();
         fp16_t v = fp32_to_fp16(value);
@@ -63,7 +71,6 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
         auto* newCpuTensor = new CPUTensor<DataType::FP16>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
-
     return OP_TODO_ERROR;
 }
 
@@ -88,7 +95,7 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t se
         }
         return std::make_shared<TensorType>(newTensor, newShape);
     }
-    if ( table->dtype() == DataType::Float ) {
+    if ( table->dtype() == DataType::FP16 ) {
         fp16_t* from = (fp16_t *)table->cpu_fp16()->data();
         fp16_t* out = (fp16_t *)outspace->cpu_fp16()->data();
         auto* newTensor = new CPUTensor<DataType::FP16>(out);
@@ -139,7 +146,23 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
 
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        fp16_t* d = (fp16_t *)data();
+        std::cout << "--------------------------" << std::endl;
+        std::cout << "First " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << fp16_to_fp32(d[i]) << " ";
+        }
+        std::cout << std::endl;
+        d = (fp16_t *)data() + self->items() - first8;
+        std::cout << "Last " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << fp16_to_fp32(d[i]) << " ";
+        }
+        std::cout << std::endl;
 
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
 

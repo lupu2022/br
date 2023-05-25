@@ -40,7 +40,9 @@ int main(int argc, char* argv[] ) {
     br::CollectiveContext::boot();
     br::MemoryContext::boot( MEM_CTX_SIZE );
     br::ComputingContext::boot( 0 );
+
     br::Enviroment* env_ = new br::Enviroment(1);
+    br::load_nn_words(*env_);
 
     env_->execute(text);
     std::string code;

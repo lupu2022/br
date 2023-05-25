@@ -21,6 +21,7 @@ ComputingReturn TensorType::op_fill(tensor_t self, float value) {
 ComputingReturn TensorType::op_copy(tensor_t self, tensor_t src) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(items() == src->items(), "copy must has same size");
+    br_assert(self->dtype() == src->dtype(), "Copy must has same data type");
     auto ret = impl()->op_copy(self, src);
     op_check(ret, "copy");
 }
@@ -254,6 +255,10 @@ TransformerComputing* TensorType::impl() {
     }
     if ( impl_index() == ImplType::CPU_INT ) {
         cpu_int_t* tensor = std::get<CPU_INT>(impl_);
+        return tensor;
+    }
+    if ( impl_index() == ImplType::CPU_FP16 ) {
+        cpu_fp16_t* tensor = std::get<CPU_FP16>(impl_);
         return tensor;
     }
     br_panic("Can't be here!");
