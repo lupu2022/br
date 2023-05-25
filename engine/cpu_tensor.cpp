@@ -8,31 +8,20 @@
 namespace br {
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::op_zero(tensor_t self) {
-    if ( _DTYPE_ == DataType::Float ) {
-        memset( mem_, 0, sizeof(float) * self->items() );
-        return OP_OK;
-    }
-    if ( _DTYPE_ == DataType::Int ) {
-        memset( mem_, 0, sizeof(int) * self->items() );
-        return OP_OK;
-    }
-    return OP_TODO_ERROR;
+    memset( mem_, 0, DataType_size(_DTYPE_)  * self->items() );
+    return OP_OK;
 }
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::op_copy(tensor_t self, tensor_t src) {
-    if ( _DTYPE_ == DataType::Float ) {
-        if ( src->is_cpu() ) {
-            memcpy(data(), src->cpu_float()->data(), self->items() * sizeof(float) );
-            return OP_OK;
-        }
-        auto stream = ComputingContext::cuda_stream;
-        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * sizeof(float), cudaMemcpyDeviceToHost, stream));
+    if ( src->is_cpu() ) {
+        memcpy(data(), src->cpu_float()->data(), self->items() * DataType_size(_DTYPE_) );
         return OP_OK;
     }
-    return OP_TODO_ERROR;
+    auto stream = ComputingContext::cuda_stream;
+    CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * DataType_size(_DTYPE_) , cudaMemcpyDeviceToHost, stream));
+    return OP_OK;
 }
-
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
@@ -43,9 +32,16 @@ ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
         }
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        fp16_t* dst = (fp16_t *)data();
+        fp16_t v = fp32_to_fp16(value);
+        for (size_t i = 0; i < self->items(); i++) {
+            dst[i] = v;
+        }
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
-
 
 template <DataType _DTYPE_>
 std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_) {

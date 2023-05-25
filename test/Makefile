@@ -9,14 +9,16 @@ INC = -I../install/include/kernels \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi 
 
-LINK = -L/home/teaonly/opt/nccl/lib -lnccl \
-	   -L/home/teaonly/opt/blas/lib -lopenblas \
-	   -L/usr/local/cuda/lib64 -lcudnn -lcudart -lcublas -lcublasLt \
-	   -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi -lmpi_cxx \
-	   -L../install/lib -lcuda_kernels -lengine
+LINK = -L/home/teaonly/opt/nccl/lib \
+	   -L/home/teaonly/opt/blas/lib \
+	   -L/usr/local/cuda/lib64 \
+	   -L/usr/lib/x86_64-linux-gnu/openmpi/lib \
+	   -L../install/lib \
+	   -lcuda_kernels -lengine -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx
 
 all:
-	g++ $(FLAGS) -o test_tokenizer tokenizer.cpp $(INC) $(LINK)
+	g++ $(FLAGS) -o tokenizer tokenizer.cpp $(INC) $(LINK)
+	g++ $(FLAGS) -o repl repl.cpp $(INC) $(LINK)
 
 clean:
-	rm test_tokenizer
+	rm -f repl tokenizer

@@ -53,6 +53,10 @@ ncclComm_t      CollectiveContext::nccl_comm = nullptr;
 int             CollectiveContext::nccl_rank = -1;
 int             CollectiveContext::nccl_world = -1;
 
+void CollectiveContext::boot() {
+    current = time(nullptr);
+}
+
 void CollectiveContext::boot(int argc, char* argv[], int gpus) {
     current = time(nullptr);
 
@@ -83,8 +87,9 @@ void CollectiveContext::shutdown() {
     if( nccl_comm != nullptr ) {
         NCCL_CHECK(ncclCommDestroy(nccl_comm));
     }
-
-    MPI_Finalize();
+    if ( mpi_rank != -1 ) {
+        MPI_Finalize();
+    }
 }
 
 int CollectiveContext::now() {
