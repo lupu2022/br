@@ -57,10 +57,14 @@ std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_
     return result;
 }
 
-ComputingReturn TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out) {
+std::variant<ComputingReturn, tensor_t> TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out) {
     br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_embed(self, table, out);
-    op_check(ret, "embed");
+    auto result = impl()->op_embed(self, table, out);
+    if ( result.index() == 0) {
+        ComputingReturn ret = std::get<0>(result);
+        op_check(ret, "loss_backward");
+    }
+    return result;
 }
 ComputingReturn TensorType::op_add(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");

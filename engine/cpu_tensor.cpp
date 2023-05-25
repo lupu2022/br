@@ -16,7 +16,6 @@ ComputingReturn CPUTensor<_DTYPE_>::op_zero(tensor_t self) {
         memset( mem_, 0, sizeof(int) * self->items() );
         return OP_OK;
     }
-
     return OP_TODO_ERROR;
 }
 
@@ -63,6 +62,14 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
 
+    return OP_TODO_ERROR;
+}
+
+template <DataType _DTYPE_>
+std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t out_) {
+    if ( _DTYPE_ == DataType::Int ) {
+
+    }
     return OP_TODO_ERROR;
 }
 

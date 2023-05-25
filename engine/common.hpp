@@ -64,6 +64,12 @@
 
 namespace br {
 
+// fp16 stuff
+using fp16_t = uint16_t;
+
+float fp16_to_fp32(fp16_t value);
+fp16_t fp32_to_fp16(float value);
+
 // some common help functions
 inline void _M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg) {
     if (!expr) {
@@ -101,6 +107,8 @@ inline void read_data(const char* fileName, std::vector<T>& dout) {
 }
 
 }
+
+
 
 #endif
 

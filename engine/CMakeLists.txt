@@ -13,6 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 project(engine LANGUAGES CUDA CXX)
 
 set(tt_files
+    common.cpp
     context.cpp
     tensortype.cpp
     cuda_tensor.cpp
