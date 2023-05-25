@@ -68,6 +68,18 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(View)
     };
 
+    struct Embed : public NativeWord {
+        void run(Stack& stack) override {
+            auto out = stack.pop_tensor();
+            auto table = stack.pop_tensor();
+            auto self = stack.pop_tensor();
+
+            auto ret = self->op_embed(self, table, out);
+            stack.push_tensor( std::get<1>(ret) );
+        }
+        NWORD_CREATOR_DEFINE_LR(Embed)
+    };
+
     struct Copy : public NativeWord {
         void run(Stack& stack) override {
             tensor_t src = stack.pop_tensor();
@@ -348,6 +360,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.view", nn::View::creator );
+    env.insert_native_word("op.embed", nn::Embed::creator );
     env.insert_native_word("op.copy", nn::Copy::creator );
     env.insert_native_word("op.linear", nn::Linear::creator );
     env.insert_native_word("op.layernorm", nn::Layernorm::creator );

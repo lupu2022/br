@@ -57,9 +57,12 @@ std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_
     return result;
 }
 
-std::variant<ComputingReturn, tensor_t> TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out) {
+std::variant<ComputingReturn, tensor_t> TensorType::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
     br_assert(self.get() == this, "can't be here!");
-    auto result = impl()->op_embed(self, table, out);
+    br_assert(table->dtype() == outspace->dtype(), " output and table must have same DataType" );
+    br_assert(self->dtype() == DataType::Int, "token id must be Int");
+    br_assert(table->impl_index() == outspace->impl_index(), "table and outspace must have same device");
+    auto result = impl()->op_embed(self, table, outspace);
     if ( result.index() == 0) {
         ComputingReturn ret = std::get<0>(result);
         op_check(ret, "loss_backward");

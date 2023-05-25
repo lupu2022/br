@@ -57,14 +57,47 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
         auto* newCpuTensor = new CPUTensor<DataType::Int>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        ShapeType newShape(newShape_);
+        fp16_t *newData = (fp16_t *)data() + offset;
+        auto* newCpuTensor = new CPUTensor<DataType::FP16>(newData);
+        return std::make_shared<TensorType>(newCpuTensor, newShape);
+    }
 
     return OP_TODO_ERROR;
 }
 
 template <DataType _DTYPE_>
-std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t out_) {
-    if ( _DTYPE_ == DataType::Int ) {
+std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
+    size_t batch = self->shape()[0];
+    size_t len = self->shape()[1];
+    size_t hidden = table->shape()[1];
 
+    ShapeType newShape( {batch, len, hidden} );
+    br_assert( newShape.numel() < outspace->items(), "Output space is not enough");
+    int* text = (int *)data();
+
+    if ( table->dtype() == DataType::Float ) {
+        float* from = (float *)table->cpu_float()->data();
+        float* out = (float *)outspace->cpu_float()->data();
+        auto* newTensor = new CPUTensor<DataType::Float>(out);
+        for (size_t i = 0; i < batch*len; i++) {
+            int id = text[i];
+            memcpy(out, from + hidden * id, hidden * sizeof(float) );
+            out += hidden;
+        }
+        return std::make_shared<TensorType>(newTensor, newShape);
+    }
+    if ( table->dtype() == DataType::Float ) {
+        fp16_t* from = (fp16_t *)table->cpu_fp16()->data();
+        fp16_t* out = (fp16_t *)outspace->cpu_fp16()->data();
+        auto* newTensor = new CPUTensor<DataType::FP16>(out);
+        for (size_t i = 0; i < batch*len; i++) {
+            int id = text[i];
+            memcpy(out, from + hidden * id, hidden * sizeof(fp16_t) );
+            out += hidden;
+        }
+        return std::make_shared<TensorType>(newTensor, newShape);
     }
     return OP_TODO_ERROR;
 }
