@@ -31,6 +31,8 @@ struct CUDATensor : public TransformerComputing {
 
         if ( _DTYPE_ == DataType::Float ) {
             dtype = CUDNN_DATA_FLOAT;
+        } else if ( _DTYPE_ == DataType::FP16 ) {
+            dtype = CUDNN_DATA_HALF;
         } else {
             br_panic("cudnn don't support!");
         }
@@ -89,7 +91,7 @@ private:
     const bool                  owner_;
 
     friend struct CUDATensor<DataType::Float>;
-    friend struct CUDATensor<DataType::BF16>;
+    friend struct CUDATensor<DataType::FP16>;
 };
 
 

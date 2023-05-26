@@ -32,6 +32,7 @@ set(cuda_kernel_files
     blackriver/LtSgemm.cu
     blackriver/LtSgemmBatched.cu
     blackriver/gelu.cu
+    blackriver/embed.cu
     blackriver/nll_loss.cu)
 
 

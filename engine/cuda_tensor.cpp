@@ -49,7 +49,41 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
         std::cout << std::endl;
         return OP_OK;
     }
+    if ( DT == DataType::FP16 ) {
+        auto stream = ComputingContext::cuda_stream;
+        std::vector<local_fp16> local_first;
+        std::vector<local_fp16> local_last;
 
+        local_first.resize(first8, 0);
+        local_last.resize(first8, 0);
+
+        auto x = self->cuda_fp16();
+        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
+
+        std::vector<size_t> pos = self->shape().vec();
+        auto shape_ = self->shape().vec();
+        for(int i = 0; i < (int)pos.size() - 1; i++) {
+            pos[i] = shape_[i] - 1;
+        }
+        pos.back() = shape_.back() - first8;
+        void* src = (device_fp16 *)x->data() + self->items() - first8;
+        CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
+
+        CUDA_CHECK(cudaStreamSynchronize(stream));
+
+        std::cout << "--------------------------" << std::endl;
+        std::cout << "First " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << fp16_to_fp32(local_first[i]) << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Last " << first8 << " : ";
+        for(size_t i = 0; i < first8; i++) {
+            std::cout << fp16_to_fp32(local_last[i]) << " ";
+        }
+        std::cout << std::endl;
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
 
@@ -218,22 +252,26 @@ std::variant<ComputingReturn, tensor_t> CUDATensor<_DTYPE_>::op_embed(tensor_t s
         float* from = (float *)table->cuda_float()->data();
         float* out = (float *)outspace->cuda_float()->data();
         auto* newTensor = new CUDATensor<DataType::Float>(out);
+        /*
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
             CUDA_CHECK(cudaMemcpyAsync(out, from + hidden * id, hidden * sizeof(float), cudaMemcpyDeviceToDevice, stream));
             out += hidden;
         }
+        */
         return std::make_shared<TensorType>(newTensor, newShape);
     }
     if ( table->dtype() == DataType::FP16 ) {
         device_fp16* from = (device_fp16 *)table->cuda_fp16()->data();
         device_fp16* out = (device_fp16 *)outspace->cuda_fp16()->data();
         auto* newTensor = new CUDATensor<DataType::FP16>(out);
+        /*
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
             CUDA_CHECK(cudaMemcpyAsync(out, from + hidden * id, hidden * sizeof(device_fp16), cudaMemcpyDeviceToDevice, stream));
             out += hidden;
         }
+        */
         return std::make_shared<TensorType>(newTensor, newShape);
     }
     return OP_TODO_ERROR;
