@@ -16,7 +16,7 @@ struct CPUTensor : public TransformerComputing {
         } else if ( _DTYPE_ == DataType::Int ) {
             mem_ = MemoryContext::alloc(shape.numel() * sizeof(int));
         } else if ( _DTYPE_ == DataType::FP16 ) {
-            mem_ = MemoryContext::alloc(shape.numel() * sizeof(fp16_t));
+            mem_ = MemoryContext::alloc(shape.numel() * sizeof(local_fp16));
         } else {
             br_panic("Can't be here!");
         }

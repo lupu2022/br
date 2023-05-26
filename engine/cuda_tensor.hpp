@@ -60,6 +60,7 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_zero(tensor_t self) override;
     ComputingReturn op_fill(tensor_t self, float value) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    std::variant<ComputingReturn, tensor_t> op_embed(tensor_t self, tensor_t table, tensor_t out) override;
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
 

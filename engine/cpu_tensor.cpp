@@ -41,8 +41,8 @@ ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
         return OP_OK;
     }
     if ( _DTYPE_ == DataType::FP16 ) {
-        fp16_t* dst = (fp16_t *)data();
-        fp16_t v = fp32_to_fp16(value);
+        local_fp16* dst = (local_fp16 *)data();
+        local_fp16 v = fp32_to_fp16(value);
         for (size_t i = 0; i < self->items(); i++) {
             dst[i] = v;
         }
@@ -67,7 +67,7 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
     }
     if ( _DTYPE_ == DataType::FP16 ) {
         ShapeType newShape(newShape_);
-        fp16_t *newData = (fp16_t *)data() + offset;
+        local_fp16 *newData = (local_fp16 *)data() + offset;
         auto* newCpuTensor = new CPUTensor<DataType::FP16>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
@@ -96,12 +96,12 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t se
         return std::make_shared<TensorType>(newTensor, newShape);
     }
     if ( table->dtype() == DataType::FP16 ) {
-        fp16_t* from = (fp16_t *)table->cpu_fp16()->data();
-        fp16_t* out = (fp16_t *)outspace->cpu_fp16()->data();
+        local_fp16* from = (local_fp16 *)table->cpu_fp16()->data();
+        local_fp16* out = (local_fp16 *)outspace->cpu_fp16()->data();
         auto* newTensor = new CPUTensor<DataType::FP16>(out);
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
-            memcpy(out, from + hidden * id, hidden * sizeof(fp16_t) );
+            memcpy(out, from + hidden * id, hidden * sizeof(local_fp16) );
             out += hidden;
         }
         return std::make_shared<TensorType>(newTensor, newShape);
@@ -147,14 +147,14 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
         return OP_OK;
     }
     if ( _DTYPE_ == DataType::FP16 ) {
-        fp16_t* d = (fp16_t *)data();
+        local_fp16* d = (local_fp16 *)data();
         std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(d[i]) << " ";
         }
         std::cout << std::endl;
-        d = (fp16_t *)data() + self->items() - first8;
+        d = (local_fp16 *)data() + self->items() - first8;
         std::cout << "Last " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(d[i]) << " ";
