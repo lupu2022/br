@@ -19,6 +19,10 @@ LINK = -L/home/teaonly/opt/nccl/lib \
 all:
 	g++ $(FLAGS) -o tokenizer tokenizer.cpp $(INC) $(LINK)
 	g++ $(FLAGS) -o repl repl.cpp $(INC) $(LINK)
+	g++ $(FLAGS) -o train_bloom train_bloom.cpp $(INC) $(LINK)
+
+run: $(TARGET)
+	mpirun -n 3 -stdin 1 train_bloom
 
 clean:
-	rm -f repl tokenizer
+	rm -f repl tokenizer train_bloom

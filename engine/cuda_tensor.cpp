@@ -297,7 +297,7 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
 
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y) {
+ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
     if ( DT == DataType::Float ) {
         auto x = this;
         size_t batch = self->shape()[0] * self->shape()[1];
@@ -309,6 +309,7 @@ ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tenso
         auto b = bias->cuda_float();
         auto out = y->cuda_float();
 
+        // TODO using eps inside kernel
         auto stream = ComputingContext::cuda_stream;
         lightseq::cuda::launch_layer_norm<float>((float *)out->data(), (float *)v->data(), (float *)m->data(),
                                  (float *)x->data(), (float *)s->data(), (float *)b->data(), batch, hidden, stream);
@@ -761,7 +762,7 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t var_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_) {
+ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t scale_, tensor_t bias_, tensor_t var_, tensor_t y_, tensor_t dscale_, tensor_t dbias_, tensor_t din_, float eps) {
     if ( DT == DataType::Float ) {
         cudaStream_t streams[] = {br::ComputingContext::cuda_stream, br::ComputingContext::cuda_stream};
 
@@ -779,6 +780,7 @@ ComputingReturn CUDATensor<DT>::op_layernorm_backward(tensor_t self, tensor_t sc
         int hidden = self->shape()[2];
         int num = batch * tokens;
 
+        // TODO using eps value
         lightseq::cuda::launch_ln_bw<float>(dscale, dbias, din, dout,
                                     nullptr, y, scale, bias,
                                     var, nullptr,

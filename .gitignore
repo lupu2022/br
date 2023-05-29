@@ -34,3 +34,4 @@
 engine/build
 kernels/build
 install
+test/*
