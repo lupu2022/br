@@ -16,13 +16,19 @@ LINK = -L/home/teaonly/opt/nccl/lib \
 	   -L../install/lib \
 	   -lengine -lcuda_kernels -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx
 
-all:
-	g++ $(FLAGS) -o tokenizer tokenizer.cpp $(INC) $(LINK)
-	g++ $(FLAGS) -o repl repl.cpp $(INC) $(LINK)
-	g++ $(FLAGS) -o train_bloom train_bloom.cpp $(INC) $(LINK)
+repl: repl.cpp
+	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-run: $(TARGET)
-	mpirun -n 3 -stdin 1 train_bloom
+tokenizer: tokenizer.cpp
+	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
+
+train: train.cpp
+	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
+
+all: repl tokenizer train
+
+run: train
+	mpirun -n 3 -stdin 1 train
 
 clean:
-	rm -f repl tokenizer train_bloom
+	rm -f repl tokenizer train

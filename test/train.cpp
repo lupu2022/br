@@ -3,13 +3,7 @@
 #include <tuple>
 #include <unistd.h>
 
-#include "common.hpp"
-#include "context.hpp"
-#include "dag.hpp"
-#include "nn.hpp"
-#include "tensortype.hpp"
-#include "cpu_tensor.hpp"
-#include "cuda_tensor.hpp"
+#include <br_engine.hpp>
 
 const size_t MEM_CTX_SIZE = 25.5 * 1024 * 1024 * 1024l;
 const int VOCAB_SIZE = 250880;
@@ -31,6 +25,17 @@ inline std::string fileToString(const char* filename) {
     return str;
 }
 
+const char* TEXT[] = {
+R"'''(
+All three calls return the length of the message on successful completion.
+If a message is too long to fit in the supplied buffer, excess bytes may be discarded depending on the type of socket the message is received from.
+)'''"
+,
+R"'''(
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+)'''"
+};
 struct BloomInput {
     BloomInput() {
         br::read_data("model/weights/word_embeddings.weight.bin", vocab);
@@ -43,9 +48,30 @@ struct BloomInput {
         const size_t tokens = 512;
 
         // fill ids&masks
+#if 0
         br::read_data("model/xinput.ids.bin", ids);
         br::read_data("model/xinput.mask.bin", mask);
+#else
+        // TODO: there are some diffirents between huggingface and c++.
+        {
+            auto tokenizer = br::build_tokenizer("../models/bloomz/bloomz.vocab");
+            int pad = tokenizer->query("<pad>");
 
+            ids.resize(batch * tokens, pad);
+            mask.resize(batch * tokens, 0);
+            for ( size_t b = 0; b < batch; b++) {
+                std::string txt = TEXT[b];
+                auto txt_ids = tokenizer->encode( txt, false);
+                std::cout << " ############## " << txt_ids.size() << std::endl;
+                for ( size_t i = 0; i < txt_ids.size(); i++) {
+                    ids[b * tokens + i] = txt_ids[i];
+                    mask[b * tokens + i] = 1;
+                    std::cout << txt_ids[i] << std::endl;
+                }
+            }
+            delete tokenizer;
+        }
+#endif
         // load embeddings
         xinput.resize(batch * tokens * HIDDEN_SIZE);
         for (size_t i = 0; i < ids.size(); i++) {

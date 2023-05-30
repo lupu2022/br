@@ -3,14 +3,15 @@
 
 #include <string>
 #include <map>
+#include <utility>
 
 namespace br {
 struct Tokensizer {
-    using id = int32_t;
-    using token = std::string;
     virtual ~Tokensizer() {}
-    virtual std::vector<id> encode(const std::string& text, bool bos = false) = 0;
-    virtual std::string decode(const std::vector<id>& tokens) = 0;
+
+    virtual std::vector<int> encode(const std::string& text, bool bos = false) = 0;
+    virtual std::string decode(const int id) = 0;
+    virtual std::string decode(const std::vector<int>& tokens) = 0;
 };
 
 Tokensizer* build_tokenizer(const char* file_name);

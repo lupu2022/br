@@ -8,8 +8,8 @@
 namespace br {
 
 struct BloomzTokensizer : public Tokensizer {
-    std::map<token, id> token_to_id;
-    std::map<id, token> id_to_token;
+    std::map<std::string, int> token_to_id;
+    std::map<int, std::string> id_to_token;
 
     BloomzTokensizer( std::ifstream& fin) {
         int32_t vocab_size;
@@ -32,8 +32,8 @@ struct BloomzTokensizer : public Tokensizer {
 
     }
 
-    virtual std::vector<id> encode(const std::string& text, bool bos) override {
-        std::vector<id> res;
+    virtual std::vector<int> encode(const std::string& text, bool bos) override {
+        std::vector<int> res;
 
         if (bos) {
             res.push_back(1); // TODO: replace with vocab.bos
@@ -64,7 +64,11 @@ struct BloomzTokensizer : public Tokensizer {
         return res;
     }
 
-    virtual std::string decode(const std::vector<id>& tokens) override {
+    virtual std::string decode(const int id) override {
+        return id_to_token[id];
+    }
+
+    virtual std::string decode(const std::vector<int>& tokens) override {
         std::string res;
         for (auto id : tokens) {
             res.append( id_to_token[id] );
