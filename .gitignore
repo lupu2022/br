@@ -31,6 +31,8 @@
 *.out
 *.app
 
+tokenizers.c/rust/Cargo.lock
+tokenizers.c/rust/target
 engine/build
 kernels/build
 install

@@ -1,0 +1,15 @@
+[package]
+name = "tokenizers-c"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+serde = { version = "1.0", features = [ "derive" ] }
+serde_json = "1.0"
+
+[dependencies.tokenizers]
+version = "*"
+path = "/home/teaonly/workspace/tokenizers/tokenizers"
