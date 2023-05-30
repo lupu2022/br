@@ -55,7 +55,7 @@ struct BloomInput {
         // TODO: there are some diffirents between huggingface and c++.
         {
             auto tokenizer = br::build_tokenizer("../models/bloomz/bloomz.vocab");
-            int pad = tokenizer->query("<pad>");
+            int pad = tokenizer->encode("<pad>")[0];
 
             ids.resize(batch * tokens, pad);
             mask.resize(batch * tokens, 0);

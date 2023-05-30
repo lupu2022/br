@@ -14,7 +14,7 @@ LINK = -L/home/teaonly/opt/nccl/lib \
 	   -L/usr/local/cuda/lib64 \
 	   -L/usr/lib/x86_64-linux-gnu/openmpi/lib \
 	   -L../install/lib \
-	   -lengine -lcuda_kernels -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx
+	   -lengine -ltokenizers_c -lcuda_kernels -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx
 
 repl: repl.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)

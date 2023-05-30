@@ -2,6 +2,10 @@
 #include <fstream>
 #include <map>
 
+extern "C" {
+#include <tokenizers_c.h>
+}
+
 #include "common.hpp"
 #include "tokenizer.hpp"
 
