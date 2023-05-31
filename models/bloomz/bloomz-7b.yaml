@@ -1,4 +1,0 @@
----
- name:      "Bloomz-7b"
- tokenizer: "tokenizer.json"
- layers:    30
