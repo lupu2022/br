@@ -18,5 +18,10 @@ function engine {
     make install
 }
 
+function tokenizers {
+    cd tokenizers.c
+    make all
+}
+
 
 $1
