@@ -1,4 +1,4 @@
 ---
  name:      "Bloomz-7b"
- vocab:     "blommz.vocab"
+ tokenizer: "tokenizer.json"
  layers:    30

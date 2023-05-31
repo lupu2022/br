@@ -11,26 +11,13 @@ const int HIDDEN_SIZE = 4096;
 const int HEADS_NUM = 32;
 const int HEAD_HIDDEN = 128;
 
-inline std::string fileToString(const char* filename) {
-    std::ifstream t(filename);
-    std::string str;
-
-    t.seekg(0, std::ios::end);
-    str.reserve(t.tellg());
-    t.seekg(0, std::ios::beg);
-
-    str.assign((std::istreambuf_iterator<char>(t)),
-        std::istreambuf_iterator<char>());
-
-    return str;
-}
-
 const char* TEXT[] = {
 R"'''(
 All three calls return the length of the message on successful completion.
-If a message is too long to fit in the supplied buffer, excess bytes may be discarded depending on the type of socket the message is received from.
+If a message is too long to fit in the supplied buffer, excess bytes may be discarded depending  on  the  type  of socket the message is received from.
 )'''"
 ,
+
 R"'''(
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
@@ -52,9 +39,8 @@ struct BloomInput {
         br::read_data("model/xinput.ids.bin", ids);
         br::read_data("model/xinput.mask.bin", mask);
 #else
-        // TODO: there are some diffirents between huggingface and c++.
         {
-            auto tokenizer = br::build_tokenizer("../models/bloomz/bloomz.vocab");
+            auto tokenizer = br::build_tokenizer("../models/bloomz/tokenizer.json");
             int pad = tokenizer->encode("<pad>")[0];
 
             ids.resize(batch * tokens, pad);
@@ -62,11 +48,9 @@ struct BloomInput {
             for ( size_t b = 0; b < batch; b++) {
                 std::string txt = TEXT[b];
                 auto txt_ids = tokenizer->encode( txt, false);
-                std::cout << " ############## " << txt_ids.size() << std::endl;
                 for ( size_t i = 0; i < txt_ids.size(); i++) {
                     ids[b * tokens + i] = txt_ids[i];
                     mask[b * tokens + i] = 1;
-                    std::cout << txt_ids[i] << std::endl;
                 }
             }
             delete tokenizer;
@@ -151,7 +135,7 @@ struct BloomAttentions {
         env_ = new br::Enviroment(layers_.size() + 1);
         br::load_nn_words(*env_);
 
-        std::string init_code = fileToString("model/init.words");
+        std::string init_code = br::fileToString("model/init.words");
         br::DaG* init_wd = env_->build(init_code);
 
         // 0th hash  is used in GPU
@@ -182,7 +166,7 @@ struct BloomAttentions {
         }
         delete init_wd;
 
-        std::string train_code = fileToString("model/train.words");
+        std::string train_code = br::fileToString("model/train.words");
         env_->change(0);
         env_->execute(train_code);
 

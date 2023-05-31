@@ -14,7 +14,7 @@ LINK = -L/home/teaonly/opt/nccl/lib \
 	   -L/usr/local/cuda/lib64 \
 	   -L/usr/lib/x86_64-linux-gnu/openmpi/lib \
 	   -L../install/lib \
-	   -lengine -ltokenizers_c -lcuda_kernels -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx
+	   -lengine -lcuda_kernels -ltokenizers_c -lnccl -lopenblas -lcudnn -lcudart -lcublas -lcublasLt -lmpi -lmpi_cxx -lssl -lcrypto
 
 repl: repl.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
@@ -26,6 +26,7 @@ train: train.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
 all: repl tokenizer train
+	@echo "Building test done."
 
 run: train
 	mpirun -n 3 -stdin 1 train

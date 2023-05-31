@@ -20,7 +20,7 @@
     29 -> ':'
 */
 int main(int argc, const char* argv[]) {
-    auto tokenizer = br::build_tokenizer("../models/bloomz/bloomz.vocab");
+    auto tokenizer = br::build_tokenizer("../models/bloomz/tokenizer.json");
 
     //std::string text = "Translate \"Hi, how are you?\" in 中文:";
     std::string text = argv[1];

@@ -2,100 +2,77 @@
 #include <fstream>
 #include <map>
 
-extern "C" {
 #include <tokenizers_c.h>
-}
 
 #include "common.hpp"
 #include "tokenizer.hpp"
 
+inline std::string fileToString(const char* filename) {
+    std::ifstream t(filename);
+    std::string str;
+
+    t.seekg(0, std::ios::end);
+    str.reserve(t.tellg());
+    t.seekg(0, std::ios::beg);
+
+    str.assign((std::istreambuf_iterator<char>(t)),
+        std::istreambuf_iterator<char>());
+
+    return str;
+}
+
 namespace br {
 
 struct BloomzTokensizer : public Tokensizer {
-    std::map<std::string, int> token_to_id;
-    std::map<int, std::string> id_to_token;
-
-    BloomzTokensizer( std::ifstream& fin) {
-        int32_t vocab_size;
-        fin.read((char *)&vocab_size, sizeof(vocab_size));
-
-        std::string word;
-        for (int i = 0; i < vocab_size; i++) {
-            uint32_t len;
-            fin.read((char *)&len, sizeof(len));
-
-            word.resize(len);
-            fin.read((char *)word.data(), len);
-
-            token_to_id[word] = i;
-            id_to_token[i] = word;
-        }
-        fin.close();
+    TokenizerHandle rustObj;
+    BloomzTokensizer( const char* file_name) {
+        std::string json = br::fileToString(file_name);
+        rustObj = tokenizers_new_from_str(json.c_str(), json.size());
     }
     ~BloomzTokensizer() {
-
+        if ( rustObj != nullptr) {
+            tokenizers_free(rustObj);
+        }
+        rustObj = nullptr;
     }
 
     virtual std::vector<int> encode(const std::string& text, bool bos) override {
+        const uint32_t* ids;
+        size_t ids_num;
+
+        tokenizers_encode(rustObj, text.c_str(), text.size(), 0);
+        tokenizers_get_encode_ids(rustObj, &ids, &ids_num);
+
         std::vector<int> res;
-
-        if (bos) {
-            res.push_back(1); // TODO: replace with vocab.bos
+        for(size_t i = 0; i < ids_num; i++) {
+            res.push_back( ids[i] );
         }
-
-        //find the longest token that matches the text
-        int pos = 0;
-        while (true) {
-            int l = 0;
-            int t = 0;
-            for (const auto & kv : id_to_token) {
-                if (kv.second.size() < l) continue;
-                if (kv.second.size() > text.size() - pos) continue;
-                if (text.substr(pos, kv.second.size()) == kv.second) {
-                    l = kv.second.size();
-                    t = kv.first;
-                }
-            }
-
-            if (l == 0) {
-                break;
-            }
-
-            res.push_back(t);
-            pos += l;
-        }
-
         return res;
     }
 
     virtual std::string decode(const int id) override {
-        return id_to_token[id];
+        std::vector<int> ids;
+        ids.push_back(id);
+        return std::move( decode(ids) );
     }
 
-    virtual std::string decode(const std::vector<int>& tokens) override {
+    virtual std::string decode(const std::vector<int>& ids) override {
+        const char* out;
+        size_t out_len;
+
+        tokenizers_decode(rustObj, (const uint32_t *)ids.data(), ids.size(), 0);
+        tokenizers_get_decode_str(rustObj, &out, &out_len);
+
         std::string res;
-        for (auto id : tokens) {
-            res.append( id_to_token[id] );
+        for (size_t i = 0; i < out_len; i++) {
+            res = res + out[i];
         }
         return res;
     }
 };
 
 Tokensizer* build_tokenizer(const char* file_name) {
-    std::ifstream fin = std::ifstream(file_name, std::ios::binary);
-    if (!fin) {
-        br_panic("Can't open tokenizer vocab file.");
-    }
-
-    // verify magic
-    uint32_t magic;
-    fin.read((char *) &magic, sizeof(magic));
-    if (magic == 0x67676d6c) {
-        return new BloomzTokensizer(fin);
-    }
-
-    br_panic("Can't build tokenizer from vocab file.");
-    return nullptr;
+    return new BloomzTokensizer(file_name);
 }
 
 }

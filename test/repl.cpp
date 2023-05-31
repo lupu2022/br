@@ -8,19 +8,6 @@
 
 const size_t MEM_CTX_SIZE = 4 * 1024 * 1024 * 1024l;
 
-inline std::string fileToString(const char* filename) {
-    std::ifstream t(filename);
-    std::string str;
-
-    t.seekg(0, std::ios::end);
-    str.reserve(t.tellg());
-    t.seekg(0, std::ios::beg);
-
-    str.assign((std::istreambuf_iterator<char>(t)),  std::istreambuf_iterator<char>());
-
-    return str;
-}
-
 bool readline(const std::string& prop, std::string& code) {
     std::cout << prop << std::flush;
     if ( std::getline(std::cin, code) ) {
@@ -33,7 +20,7 @@ bool readline(const std::string& prop, std::string& code) {
 int main(int argc, char* argv[] ) {
     std::string text;
     for (int i = 1; i < argc; i++) {
-        auto code = fileToString( argv[i] );
+        auto code = br::fileToString( argv[i] );
         text = text + code + "\n";
     }
 
