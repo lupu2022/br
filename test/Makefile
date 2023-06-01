@@ -25,11 +25,11 @@ tokenizer: tokenizer.cpp
 train: train.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-all: repl tokenizer train
-	@echo "Building test done."
+bloomz: bloomz.cpp
+	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-run: train
-	mpirun -n 3 -stdin 1 train
+run: bloomz
+	mpirun -n 3 -stdin 0 bloomz
 
 clean:
-	rm -f repl tokenizer train
+	rm -f repl tokenizer train bloomz

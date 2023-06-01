@@ -263,10 +263,19 @@
     ;; alibi in GPU
     {
         dup
-        "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view dup "alibi" ! op.alibi
+        "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view "alibi"
 
         "HEADS_NUM" @ $tokens @ * +
     }
+
+    ;; causal mask in GPU
+    {
+        dup
+        "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "causal_mask"  !
+
+        $batch @ $tokens @ $tokens @ * * +
+    }
+
 
     ;;  keep var in layer_norm, used for backward
     {
@@ -281,15 +290,6 @@
         dup
         "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "ln_mean" !
         "HIDDEN_SIZE" @  +
-    }
-
-    ;; xmask in GPU, xmask_ in CPU
-    {
-        dup
-        "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask"  !
-        "_xmask_" @ 0  $batch @ 1 $tokens @  $tokens @  4 op.view   "xmask_" !
-
-        $batch @ $tokens @ $tokens @ * * +
     }
 
     ;; xa, xb, xc

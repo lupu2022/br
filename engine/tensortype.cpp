@@ -24,6 +24,13 @@ ComputingReturn TensorType::op_alibi(tensor_t self) {
     op_check(ret, "alibi");
 }
 
+ComputingReturn TensorType::op_causal_mask(tensor_t self, tensor_t out) {
+    br_assert(self.get() == this, "can't be here!");
+    br_assert(self->dtype() == DataType::Int, " mask must be int !");
+    auto ret = impl()->op_causal_mask(self, out);
+    op_check(ret, "causal_mask");
+}
+
 ComputingReturn TensorType::op_copy(tensor_t self, tensor_t src) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(items() == src->items(), "copy must has same size");

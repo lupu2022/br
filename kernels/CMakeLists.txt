@@ -33,7 +33,8 @@ set(cuda_kernel_files
     blackriver/LtSgemmBatched.cu
     blackriver/gelu.cu
     blackriver/embed.cu
-    blackriver/nll_loss.cu)
+    blackriver/nll_loss.cu
+    blackriver/misc.cu)
 
 
 add_library(cuda_kernels STATIC ${cuda_kernel_files})

@@ -23,13 +23,13 @@ inline std::string fileToString(const char* filename) {
 
 namespace br {
 
-struct BloomzTokensizer : public Tokensizer {
+struct BloomzTokenizer : public Tokenizer {
     TokenizerHandle rustObj;
-    BloomzTokensizer( const char* file_name) {
+    BloomzTokenizer( const char* file_name) {
         std::string json = br::fileToString(file_name);
         rustObj = tokenizers_new_from_str(json.c_str(), json.size());
     }
-    ~BloomzTokensizer() {
+    ~BloomzTokenizer() {
         if ( rustObj != nullptr) {
             tokenizers_free(rustObj);
         }
@@ -71,8 +71,8 @@ struct BloomzTokensizer : public Tokensizer {
     }
 };
 
-Tokensizer* build_tokenizer(const char* file_name) {
-    return new BloomzTokensizer(file_name);
+Tokenizer* build_tokenizer(const char* file_name) {
+    return new BloomzTokenizer(file_name);
 }
 
 }

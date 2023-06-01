@@ -163,26 +163,30 @@ ComputingReturn CUDATensor<DT>::op_alibi(tensor_t self) {
     if ( DT == DataType::Float ) {
         int heads = self->shape()[1];
         int tokens = self->shape()[3];
-        std::vector<float> alibi;
-
-        {
-            double base = 3 - log2(heads*1.0);
-            base = -1 * pow(2.0, base);
-            base = pow(2.0, base);
-
-            for (int j = 0; j < heads; j++) {
-                double slope = pow(base, (j + 1) * 1.0);
-                for (int k = 0; k < (int)tokens; k++) {
-                    alibi.push_back( k * 1.0 * slope );
-                }
-            }
-        }
         auto stream = ComputingContext::cuda_stream;
-        CUDA_CHECK(cudaMemcpyAsync(data(), alibi.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+
+        float* dst = (float *)data();
+        cuda::alibi<float>(dst, heads, tokens, stream);
+
         return OP_OK;
     }
-
     return OP_TODO_ERROR;
+}
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_causal_mask(tensor_t self, tensor_t out) {
+    int batch = self->shape()[0];
+    int tokens = self->shape()[1];
+    auto stream = ComputingContext::cuda_stream;
+
+    int* mask  = (int *)data();
+    if ( out->dtype() == DataType::Float ) {
+        float* dst = (float *)out->cuda_float()->data();
+        cuda::causal_mask<float>(mask, dst, batch, tokens, stream);
+    } else {
+        return OP_TODO_ERROR;
+    }
+    return OP_OK;
 }
 
 template<DataType DT>
