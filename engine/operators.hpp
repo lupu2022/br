@@ -50,6 +50,9 @@ struct TransformerComputing {
     virtual ComputingReturn op_fill(tensor_t self, float value) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_alibi(tensor_t self) {
+        return OP_TODO_ERROR;
+    }
     virtual ComputingReturn op_copy(tensor_t self, tensor_t dst) {
         return OP_TODO_ERROR;
     }

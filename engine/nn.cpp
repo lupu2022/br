@@ -61,6 +61,14 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Fill)
     };
 
+    struct Alibi : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t t = stack.pop_tensor();
+            t->op_alibi(t);
+        }
+        NWORD_CREATOR_DEFINE_LR(Alibi)
+    };
+
     struct View : public NativeWord {
         void run(Stack& stack) override {
             auto shape = fetch_shape(stack);
@@ -365,6 +373,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.create", nn::Create::creator );
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
+    env.insert_native_word("op.alibi", nn::Alibi::creator );
     env.insert_native_word("op.view", nn::View::creator );
     env.insert_native_word("op.embed", nn::Embed::creator );
     env.insert_native_word("op.copy", nn::Copy::creator );

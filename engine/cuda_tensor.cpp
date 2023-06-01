@@ -159,6 +159,33 @@ ComputingReturn CUDATensor<DT>::op_fill(tensor_t self, float value) {
 }
 
 template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_alibi(tensor_t self) {
+    if ( DT == DataType::Float ) {
+        int heads = self->shape()[1];
+        int tokens = self->shape()[3];
+        std::vector<float> alibi;
+
+        {
+            double base = 3 - log2(heads*1.0);
+            base = -1 * pow(2.0, base);
+            base = pow(2.0, base);
+
+            for (int j = 0; j < heads; j++) {
+                double slope = pow(base, (j + 1) * 1.0);
+                for (int k = 0; k < (int)tokens; k++) {
+                    alibi.push_back( k * 1.0 * slope );
+                }
+            }
+        }
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(data(), alibi.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
+
+    return OP_TODO_ERROR;
+}
+
+template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
     if ( DT == DataType::Float ) {
         if ( src->is_cpu() ) {

@@ -18,6 +18,12 @@ ComputingReturn TensorType::op_fill(tensor_t self, float value) {
     op_check(ret, "fill");
 }
 
+ComputingReturn TensorType::op_alibi(tensor_t self) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_alibi(self);
+    op_check(ret, "alibi");
+}
+
 ComputingReturn TensorType::op_copy(tensor_t self, tensor_t src) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(items() == src->items(), "copy must has same size");
