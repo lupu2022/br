@@ -90,11 +90,16 @@ inline void _M_Panic(const char* file, int line, const char* msg) {
 template<typename T>
 inline void read_data(const char* fileName, std::vector<T>& dout) {
     std::ifstream inf(fileName, std::ios::binary);
+    if ( ! inf.is_open() ) {
+        std::cout << "Can't open " << fileName << std::endl;
+        br_panic("Can't open file");
+    }
+
     inf.seekg(0, inf.end);
     size_t length = inf.tellg();
     inf.seekg(0, inf.beg);
 
-    const size_t count = 1024;
+    const size_t count = 4096;
     const size_t items = length / sizeof(T);
     br_assert( items % count == 0, "Only support block read");
     dout.resize( items );

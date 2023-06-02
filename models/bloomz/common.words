@@ -7,16 +7,13 @@
     ;; TODO: fp32 vs fp16 
     1 "cuda" "float" op.create  "_var_"     !
     
-    $tokens !
-    $batch !
-
-    ($tokens @ $batch @ *) 1 "cpu"  "int"  op.create  "_ids_"     !
-    ($tokens @ $batch @ *) 1 "cpu"  "int"  op.create  "_mask_"    !
+    dup dup dup
     
-    $batch $tokens $tokens * *  1 "cpu"  "float"  op.create  "_xmask_"   !  
+    1 "cpu"  "int"  op.create  "_ids_"     !
+    1 "cpu"  "int"  op.create  "_mask_"    !
 
-    $tokens !!
-    $batch !!
+    1 "cuda" "int" op.create "_ids" !
+    1 "cuda" "int" op.create "_mask" !
 %end
 
 %def create_input_weight
@@ -39,7 +36,7 @@
     "HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @  op.create  "ln_f.weight"  !
     "HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @  op.create  "ln_f.bias"    !
 
-    "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @ $DTYPE @ op.create "lm_head.weight_" !
+    "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @ $DTYPE @ op.create "lm_head.weight" !
 
     $DTYPE  !!
     $DEVICE !!
@@ -83,26 +80,32 @@
 %end
 
 %def load_input_weight
+    "Loading input weight..." echo 
+    
     $weights_path ! 
     
     {
         "word_embeddings_layernorm.weight" @
-        $weights_path @ "word_embeddings_layernorm.weight.bin"  | 
+        $weights_path @ "word_embeddings_layernorm.weight.bin"  |  
         io.load
         
         "word_embeddings_layernorm.bias" @
-        $weights_path  "word_embeddings_layernorm.bias.bin"  | 
+        $weights_path @ "word_embeddings_layernorm.bias.bin"  | 
         io.load
     }
 
-    "word_embeddngs.weight" @
-    $weights_path  "word_embeddings.weight.bin"  |
+    "word_embeddings.weight" @
+    $weights_path @ "word_embeddings.weight.bin"  |
     io.load
 
-    $weights_path !! 
+    $weights_path !!
+
+    "Loaded input weight." echo
 %end
 
 %def load_output_weight
+    "Loading output weight..." echo 
+    
     $weights_path ! 
     
     {
@@ -111,82 +114,87 @@
         io.load
         
         "ln_f.bias" @
-        $weights_path  "ln_f.bias.bin"  | 
+        $weights_path @ "ln_f.bias.bin"  | 
         io.load
     }
 
     "lm_head.weight" @
-    $weights_path  "lm_head.weight.bin"  |
+    $weights_path @ "lm_head.weight.bin"  |
     io.load
 
-    $weights_path !! 
+    $weights_path !!
+
+    "Loaded output weight." echo
 %end
 
 %def load_layer_weight
     $weights_path ! 
     
+    "Loading... " $weights_path @ | echo
+
     {
         "input_layernorm.weight" @
-        $weights_path @  | ".input_layernorm.weight.bin" | 
+        $weights_path @  ".input_layernorm.weight.bin" | 
         io.load
    
         "input_layernorm.bias" @
-        $weights_path @  | ".input_layernorm.bias.bin" | 
+        $weights_path @  ".input_layernorm.bias.bin" | 
         io.load
     }
 
     {
         "query_key_value.weight" @
-        $weights_path @  | ".query_key_value.weight.bin" | 
+        $weights_path @  ".query_key_value.weight.bin" | 
         io.load
    
         "query_key_value.bias" @
-        $weights_path @  | ".query_key_value.bias.bin" | 
+        $weights_path @  ".query_key_value.bias.bin" | 
         io.load
     }
 
     {
         "dense.weight" @
-        $weights_path @  | ".dense.weight.bin" | 
+        $weights_path @  ".dense.weight.bin" | 
         io.load
    
         "dense.bias" @
-        $weights_path @  | ".dense.bias.bin" | 
+        $weights_path @  ".dense.bias.bin" | 
         io.load
     }
 
     {
         "dense_h_to_4h.weight" @
-        $weights_path @  | ".dense_h_to_4h.weight.bin" | 
+        $weights_path @  ".dense_h_to_4h.weight.bin" | 
         io.load
    
         "dense_h_to_4h.bias" @
-        $weights_path @  | ".dense_h_to_4h.bias.bin" | 
+        $weights_path @  ".dense_h_to_4h.bias.bin" | 
         io.load
     }
     
     {
         "dense_4h_to_h.weight" @
-        $weights_path @  | ".dense_4h_to_h.weight.bin" | 
+        $weights_path @  ".dense_4h_to_h.weight.bin" | 
         io.load
    
         "dense_4h_to_h.bias" @
-        $weights_path @  | ".dense_4h_to_h.bias.bin" | 
+        $weights_path @  ".dense_4h_to_h.bias.bin" | 
         io.load
     }
 
     {
         "post_attention_layernorm.weight" @
-        $weights_path @  | ".post_attention_layernorm.weight.bin" | 
+        $weights_path @  ".post_attention_layernorm.weight.bin" | 
         io.load
    
         "post_attention_layernorm.bias" @
-        $weights_path @  | ".post_attention_layernorm.bias.bin" | 
+        $weights_path @  ".post_attention_layernorm.bias.bin" | 
         io.load
     }
     
+    "Loaded " $weights_path @ | echo
+    
     $weights_path !!
-
 %end
 
 %def sync_layer_copy
@@ -245,19 +253,20 @@
     $batch  !
 
     "_ids_" @ 0  $batch @   $tokens @  2 op.view  "ids_" !
-
     "_mask_" @ 0  $batch @   $tokens @  2 op.view  "mask_" !
+    
+    "_ids" @ 0  $batch @   $tokens @  2 op.view  "ids" !
+    "_mask" @ 0  $batch @   $tokens @  2 op.view  "mask" !
 
     ;; xinput in GPU, xinput_ in CPU
     {
-        "_var_"    @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
-
+        "_var_" @ 0     $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
         $batch @ $tokens @ "HIDDEN_SIZE" @ * *
+        
         dup
-
         "_var_" @ swap  $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "yout_g" !
-
         $batch @ $tokens @ "HIDDEN_SIZE" @ * * +
+    
     }
 
     ;; alibi in GPU

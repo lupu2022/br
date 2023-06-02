@@ -30,6 +30,8 @@ namespace nn {
                 t = br::create_cuda_float(shape);
             } else if ( dtype == "float" && device == "cpu" ) {
                 t = br::create_cpu_float(shape);
+            } else if (dtype == "int" && device=="cuda") {
+                t = br::create_cuda_int(shape);
             } else if (dtype == "int" && device=="cpu") {
                 t = br::create_cpu_int(shape);
             } else if ( dtype == "fp16" && device == "cuda" ) {
