@@ -19,9 +19,15 @@ struct ChatApplication {
         while( readline(">> ", text) ) {
             if ( text.size() > 0 ) {
                 auto tokens = tokenizer_->encode(text);
+
+                std::vector<int> ids;
                 for(auto& v : tokens) {
-                    std::cout << v << "\t |" << tokenizer_->decode(v)  << "|" << std::endl;
+                    ids.push_back(v);
                 }
+
+                int n = ids.size();
+                MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
             }
         }
     }
