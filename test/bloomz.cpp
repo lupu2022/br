@@ -21,15 +21,25 @@ struct ChatApplication {
                 auto tokens = tokenizer_->encode(text);
 
                 std::vector<int> ids;
+                std::vector<float> masks;
                 for(auto& v : tokens) {
                     ids.push_back(v);
+                    masks.push_back(1.0);
                 }
-
-                int n = ids.size();
-                MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
+                int len = ids.size() + 4;
+                len = len - (len % 4);
+                for (int i = 0; i < len - (int)ids.size(); i++) {
+                    ids.push_back( tokenizer_->token_pad() );
+                    mask.push_back(0.0);
+                }
+                MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(mask.data(), len, MPI_FLOAT, 0, MPI_COMM_WORLD);
             }
         }
+
+        int n = -1;
+        MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     bool readline(const std::string& prop, std::string& code) {

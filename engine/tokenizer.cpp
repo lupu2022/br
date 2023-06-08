@@ -36,11 +36,20 @@ struct BloomzTokenizer : public Tokenizer {
         rustObj = nullptr;
     }
 
+
+    virtual int token_pad() override {
+        return 3;
+    }
+
+    virtual int token_unk() override {
+        return 0;
+    }
+
     virtual std::vector<int> encode(const std::string& text, bool bos) override {
         const uint32_t* ids;
         size_t ids_num;
 
-        tokenizers_encode(rustObj, text.c_str(), text.size(), 0);
+        tokenizers_encode(rustObj, text.c_str(), text.size(), token_unk());
         tokenizers_get_encode_ids(rustObj, &ids, &ids_num);
 
         std::vector<int> res;
@@ -60,7 +69,7 @@ struct BloomzTokenizer : public Tokenizer {
         const char* out;
         size_t out_len;
 
-        tokenizers_decode(rustObj, (const uint32_t *)ids.data(), ids.size(), 0);
+        tokenizers_decode(rustObj, (const uint32_t *)ids.data(), ids.size(), token_unk());
         tokenizers_get_decode_str(rustObj, &out, &out_len);
 
         std::string res;
