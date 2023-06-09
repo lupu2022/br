@@ -39,7 +39,7 @@ public:
     ComputingReturn op_copy(tensor_t self, tensor_t dst) override;
     ComputingReturn op_fill(tensor_t self, float value) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape_) override;
-    std::variant<ComputingReturn, tensor_t> op_embed(tensor_t self, tensor_t table, tensor_t out) override;
+    ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
 
 private:
     void* mem_;

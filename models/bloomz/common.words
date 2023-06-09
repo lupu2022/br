@@ -2,10 +2,10 @@
 4096                    "HIDDEN_SIZE"           !
 32                      "HEADS_NUM"             !
 128                     "HEAD_HIDDEN"           !
+1e-08                   "LN_EPS"                !
 
 %def create_variable
-    ;; TODO: fp32 vs fp16 
-    1 "cuda" "float" op.create  "_var_"     !
+    1 "cuda" rot op.create  "_var_"     !
     
     dup dup dup
     
@@ -197,7 +197,57 @@
     $weights_path !!
 %end
 
-%def sync_layer_copy
+%def sync_layer_clone
+    dup
+ 
+    #       "input_layernorm.weight" @  
+    0 #     "input_layernorm.weight" !
+    dup
+  
+    #       "input_layernorm.bias" @
+    0 #     "input_layernorm.bias" ! 
+    dup
+
+    #       "query_key_value.weight" @
+    0 #     "query_key_value.weight" !
+    dup
+
+    #       "query_key_value.bias" @
+    0 #     "query_key_value.bias" !
+    dup
+
+    #       "dense.weight" @
+    0 #     "dense.weight" !
+    dup  
+
+    #       "dense.bias" @
+    0 #     "dense.bias" ! 
+    dup
+
+    #       "dense_h_to_4h.weight" @
+    0 #     "dense_h_to_4h.weight" !
+    dup  
+
+    #       "dense_h_to_4h.bias" @
+    0 #     "dense_h_to_4h.bias" !
+    dup
+
+    #       "dense_4h_to_h.weight" @
+    0 #     "dense_4h_to_h.weight" !
+    dup    
+
+    #       "dense_4h_to_h.bias" @
+    0 #     "dense_4h_to_h.bias" !
+    dup
+  
+    #       "post_attention_layernorm.weight" @
+    0 #     "post_attention_layernorm.weight" !
+
+    #       "post_attention_layernorm.bias" @
+    0 #     "post_attention_layernorm.bias" !
+%end
+
+%def sync_layer_offload
     dup
  
     0 #        "input_layernorm.weight" @  
@@ -242,10 +292,11 @@
   
     0 #        "post_attention_layernorm.weight" @
     swap #     "post_attention_layernorm.weight" @  op.copy
-    dup
 
     0 #        "post_attention_layernorm.bias" @
     swap #     "post_attention_layernorm.bias" @    op.copy
+
+    0 #
 %end
 
 %def create_dynamic
@@ -254,26 +305,24 @@
 
     "_ids_" @ 0  $batch @   $tokens @  2 op.view  "ids_" !
     "_mask_" @ 0  $batch @   $tokens @  2 op.view  "mask_" !
-    
+   
     "_ids" @ 0  $batch @   $tokens @  2 op.view  "ids" !
-    "_mask" @ 0  $batch @   $tokens @  2 op.view  "mask" !
+    "_mask" @ 0  $batch @  $tokens @  2 op.view  "mask" !
 
     ;; xinput in GPU, xinput_ in CPU
     {
-        "_var_" @ 0     $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
+        "_var_" @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
         $batch @ $tokens @ "HIDDEN_SIZE" @ * *
         
         dup
         "_var_" @ swap  $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "yout_g" !
         $batch @ $tokens @ "HIDDEN_SIZE" @ * * +
-    
     }
 
     ;; alibi in GPU
     {
         dup
-        "_var_" @ swap  1 "HEADS_NUM" @ 1 $tokens @  4 op.view "alibi"
-
+        "_var_" @ swap 1 "HEADS_NUM" @ 1 $tokens @ 4 op.view "alibi" !
         "HEADS_NUM" @ $tokens @ * +
     }
 
@@ -281,10 +330,8 @@
     {
         dup
         "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "causal_mask"  !
-
         $batch @ $tokens @ $tokens @ * * +
     }
-
 
     ;;  keep var in layer_norm, used for backward
     {
@@ -395,9 +442,9 @@
         ;; get query@key
         "zquery" @  "zkey" @  "xll" @ op.querykey
 
-        ;; added alibi and apply xmask
+        ;; added alibi and apply causal_mask
         "xll" @ "alibi" @ "xll" @ op.add
-        "xll" @ "xmask" @ "xll" @ op.add
+        "xll" @ "causal_mask" @ "xll" @ op.add
 
         ;; do softmax
         "xll" @ "xll" @ op.softmax

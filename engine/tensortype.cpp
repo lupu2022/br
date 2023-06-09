@@ -71,17 +71,14 @@ std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_
     return result;
 }
 
-std::variant<ComputingReturn, tensor_t> TensorType::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
+ComputingReturn TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out) {
     br_assert(self.get() == this, "can't be here!");
-    br_assert(table->dtype() == outspace->dtype(), " output and table must have same DataType" );
     br_assert(self->dtype() == DataType::Int, "token id must be Int");
-    br_assert(table->impl_index() == outspace->impl_index(), "table and outspace must have same device");
-    auto result = impl()->op_embed(self, table, outspace);
-    if ( result.index() == 0) {
-        ComputingReturn ret = std::get<0>(result);
-        op_check(ret, "loss_backward");
-    }
-    return result;
+    br_assert(table->dtype() == out->dtype(), " output and table must have same DataType" );
+    br_assert(table->impl_index() == out->impl_index(), "table and outspace must have same device");
+    br_assert(table->shape()[1] == out->shape()[2], "table and out must have same hidden size");
+    auto ret = impl()->op_embed(self, table, out);
+    op_check(ret, "loss_backward");
 }
 ComputingReturn TensorType::op_add(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");
@@ -256,6 +253,10 @@ TensorType::~TensorType() {
 TransformerComputing* TensorType::impl() {
     if ( impl_index() == ImplType::CUDA_FLOAT ) {
         cuda_float_t* tensor = std::get<CUDA_FLOAT>(impl_);
+        return tensor;
+    }
+    if ( impl_index() == ImplType::CUDA_INT ) {
+        cuda_int_t* tensor = std::get<CUDA_INT>(impl_);
         return tensor;
     }
     if ( impl_index() == ImplType::CUDA_FP16 ) {

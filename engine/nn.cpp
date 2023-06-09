@@ -71,6 +71,15 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Alibi)
     };
 
+    struct CausalMask : public NativeWord {
+        void run(Stack& stack) override {
+            auto out = stack.pop_tensor();
+            auto self = stack.pop_tensor();
+            self->op_causal_mask(self, out);
+        }
+        NWORD_CREATOR_DEFINE_LR(CausalMask)
+    };
+
     struct View : public NativeWord {
         void run(Stack& stack) override {
             auto shape = fetch_shape(stack);
@@ -88,8 +97,7 @@ namespace nn {
             auto table = stack.pop_tensor();
             auto self = stack.pop_tensor();
 
-            auto ret = self->op_embed(self, table, out);
-            stack.push_tensor( std::get<1>(ret) );
+            self->op_embed(self, table, out);
         }
         NWORD_CREATOR_DEFINE_LR(Embed)
     };
@@ -376,6 +384,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.alibi", nn::Alibi::creator );
+    env.insert_native_word("op.causal_mask", nn::CausalMask::creator );
     env.insert_native_word("op.view", nn::View::creator );
     env.insert_native_word("op.embed", nn::Embed::creator );
     env.insert_native_word("op.copy", nn::Copy::creator );

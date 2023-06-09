@@ -75,36 +75,32 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
 }
 
 template <DataType _DTYPE_>
-std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
+ComputingReturn CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
     size_t batch = self->shape()[0];
     size_t len = self->shape()[1];
     size_t hidden = table->shape()[1];
 
-    ShapeType newShape( {batch, len, hidden} );
-    br_assert( newShape.numel() < outspace->items(), "Output space is not enough");
     int* text = (int *)data();
 
     if ( table->dtype() == DataType::Float ) {
         float* from = (float *)table->cpu_float()->data();
         float* out = (float *)outspace->cpu_float()->data();
-        auto* newTensor = new CPUTensor<DataType::Float>(out);
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
             memcpy(out, from + hidden * id, hidden * sizeof(float) );
             out += hidden;
         }
-        return std::make_shared<TensorType>(newTensor, newShape);
+        return OP_OK;
     }
     if ( table->dtype() == DataType::FP16 ) {
         local_fp16* from = (local_fp16 *)table->cpu_fp16()->data();
         local_fp16* out = (local_fp16 *)outspace->cpu_fp16()->data();
-        auto* newTensor = new CPUTensor<DataType::FP16>(out);
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
             memcpy(out, from + hidden * id, hidden * sizeof(local_fp16) );
             out += hidden;
         }
-        return std::make_shared<TensorType>(newTensor, newShape);
+        return OP_OK;
     }
     return OP_TODO_ERROR;
 }
@@ -192,6 +188,10 @@ template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_mpi_recv(tensor_t self, int source) {
     if ( _DTYPE_ == DataType::Float ) {
         MPI_Recv(data(), self->items(), MPI_FLOAT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        return OP_OK;
+    }
+    if ( _DTYPE_ == DataType::Int ) {
+        MPI_Recv(data(), self->items(), MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         return OP_OK;
     }
     return OP_TODO_ERROR;

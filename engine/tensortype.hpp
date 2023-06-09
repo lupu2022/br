@@ -42,6 +42,8 @@ inline const char* DataType_name(DataType type_) {
             return "f16";
         case BF16:
             return "bf16";
+        case Int:
+            return "int";
         default:
             break;
     }
@@ -189,6 +191,12 @@ public:
         }
         return std::get<CUDA_FP16>(impl_);
     }
+    cuda_int_t* cuda_int() {
+        if ( impl_.index() != CUDA_INT ) {
+            br_panic("Cant get cuda_int from a tensor");
+        }
+        return std::get<CUDA_INT>(impl_);
+    }
 
     // help functions
     std::string to_string() {
@@ -205,10 +213,7 @@ public:
         return ss.str();
     }
     const char* device_name() {
-        if (impl_index() == ImplType::CPU_FLOAT) {
-            return "cpu";
-        }
-        if (impl_index() == ImplType::CPU_FP16) {
+        if (impl_index() <= ImplType::CPU_INT) {
             return "cpu";
         }
         return "cuda";
@@ -221,6 +226,9 @@ public:
         if (impl_index() == ImplType::CPU_FP16) {
             return true;
         }
+        if (impl_index() == ImplType::CPU_INT) {
+            return true;
+        }
         return false;
     }
 
@@ -229,6 +237,9 @@ public:
             return true;
         }
         if (impl_index() == ImplType::CUDA_FP16) {
+            return true;
+        }
+        if (impl_index() == ImplType::CUDA_INT) {
             return true;
         }
         return false;
@@ -262,7 +273,7 @@ public:
     ComputingReturn op_causal_mask(tensor_t self, tensor_t out) override;
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
-    std::variant<ComputingReturn, tensor_t> op_embed(tensor_t self, tensor_t table, tensor_t out) override;
+    ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
     ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
     ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c) override;
     ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
