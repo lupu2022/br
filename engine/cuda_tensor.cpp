@@ -165,7 +165,6 @@ ComputingReturn CUDATensor<DT>::io_nccl_recv(tensor_t self, int dst) {
     return OP_TODO_ERROR;
 }
 
-
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_zero(tensor_t self) {
     if ( DT == DataType::Float ) {
@@ -179,8 +178,23 @@ ComputingReturn CUDATensor<DT>::op_zero(tensor_t self) {
 }
 
 template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_scale(tensor_t self, float scale) {
+    if ( DT == DataType::Float  || DT == DataType::FP16 ) {
+        void *dst = data();
+        auto desc = create_cudnn_td_with( self->shape().vec() );
+        CUDNN_CHECK( cudnnScaleTensor( ComputingContext::cudnn_handle,
+                                     desc,
+                                     dst,
+                                     &scale) );
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+
+template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_fill(tensor_t self, float value) {
-    if ( DT == DataType::Float ) {
+    if ( DT == DataType::Float ||  DT == DataType::FP16 ) {
         float* dst = (float *)data();
         auto desc = create_cudnn_td_with( {self->items()} );
         CUDNN_CHECK( cudnnSetTensor( ComputingContext::cudnn_handle,

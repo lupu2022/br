@@ -411,11 +411,7 @@
 
     ;; output logits , shared with attn_in
     {
-        dup
-        "_var_" @ swap "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 op.view "lm_head.weight" !
-        "VOCAB_SIZE" @  "HIDDEN_SIZE" @ * +
-
-        "_var_" @ swap 0 "VOCAB_SIZE" @ 2 op.view  "all_logits" !
+        "_var_" @ swap $batch @ "VOCAB_SIZE" @ 2 op.view  "all_logits" !
     }
 
     $tokens !!

@@ -65,6 +65,9 @@ struct TransformerComputing {
     virtual ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t output) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_scale(tensor_t self, float scale) {
+        return OP_TODO_ERROR;
+    }
     virtual ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) {
         return OP_TODO_ERROR;
     }

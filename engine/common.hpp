@@ -114,8 +114,12 @@ inline void read_data(const char* fileName, std::vector<T>& dout) {
 
 inline std::string fileToString(const char* filename) {
     std::ifstream t(filename);
-    std::string str;
+    if ( ! t.is_open() ) {
+        std::cout << "Can't open " << filename << std::endl;
+        br_panic("Can't open file");
+    }
 
+    std::string str;
     t.seekg(0, std::ios::end);
     str.reserve(t.tellg());
     t.seekg(0, std::ios::beg);

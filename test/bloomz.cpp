@@ -32,10 +32,14 @@ struct ChatApplication {
                 }
                 int len = ids.size() + 4;
                 len = len - (len % 4);
-                for (int i = 0; i < len - (int)ids.size(); i++) {
+                len = len - (int)ids.size();
+
+                for (int i = 0; i < len; i++) {
                     ids.push_back( tokenizer_->token_pad() );
                     masks.push_back(0);
                 }
+
+                len = (int)ids.size();
                 MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(masks.data(), len, MPI_INT, 0, MPI_COMM_WORLD);

@@ -80,6 +80,13 @@ ComputingReturn TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out
     auto ret = impl()->op_embed(self, table, out);
     op_check(ret, "loss_backward");
 }
+
+ComputingReturn TensorType::op_scale(tensor_t self, float scale) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_scale(self, scale);
+    op_check(ret, "scale");
+}
+
 ComputingReturn TensorType::op_add(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_add(self, b, c);

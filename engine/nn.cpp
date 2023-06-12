@@ -160,6 +160,15 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(QueryKey)
     };
 
+    struct Scale : public NativeWord {
+        void run(Stack& stack) override {
+            float scale = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->op_scale(x, scale);
+        }
+        NWORD_CREATOR_DEFINE_LR(Scale)
+    };
+
     struct Add : public NativeWord {
         void run(Stack& stack) override {
             tensor_t c = stack.pop_tensor();
@@ -385,6 +394,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.alibi", nn::Alibi::creator );
     env.insert_native_word("op.causal_mask", nn::CausalMask::creator );
+    env.insert_native_word("op.scale", nn::Scale::creator );
     env.insert_native_word("op.view", nn::View::creator );
     env.insert_native_word("op.embed", nn::Embed::creator );
     env.insert_native_word("op.copy", nn::Copy::creator );
