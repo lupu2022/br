@@ -90,12 +90,10 @@
     "alibi" @ op.alibi
     "mask" @ "causal_mask" @ op.causal_mask 
    
-    ;; building input data for layer0 
+    ;; embed & ln    
     {
         "ids" @ "word_embeddings.weight" @ "xa" @ op.embed
         "xa" @ "ln_mean" @ "input_ln_var" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ "LN_EPS" @ op.layernorm 
-
-        "xinput" @ io.dump
     }
 
     1  sync_layer_offload                           layer_forward "xa" @ 1 io.nccl.send
@@ -126,6 +124,8 @@
     "ids"  @    "ids_" @ op.copy
     "mask" @    "mask_" @ op.copy
 
+     
+
     "alibi" @ op.alibi
     "mask" @ "causal_mask" @ op.causal_mask 
 
@@ -145,7 +145,14 @@
     14 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
     15 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward
 
-    ;;"xa" @ "ln_mean" @ "post_ln_var" @ "ln_f.weight" @ "ln_f.bias" @ "xb" @ "LN_EPS" @ op.layernorm
-    ;;"xa" @ "mask_" @ "lm_head.weight" @ "all_logits" @  op.last_logits 
-    "xa" @ io.dump
+    ;; ln & output
+    {
+        "xa" @ "ln_mean" @ "post_ln_var" @ "ln_f.weight" @ "ln_f.bias" @ "xb" @ "LN_EPS" @ op.layernorm
+        "xb" @ "mask_" @ "lm_head.weight" @ "all_logits" @  op.last_logits 
+    }
+    
+    "all_logits" @ io.dump
+
+    ;; sampling using tempture & top_p
+
 %end

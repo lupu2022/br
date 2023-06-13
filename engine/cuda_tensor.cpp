@@ -1,4 +1,5 @@
 #include <cmath>
+#include <utility>
 #include <algorithm>
 #include <openblas/cblas.h>
 #include <kernels.hpp>
@@ -496,21 +497,39 @@ ComputingReturn  CUDATensor<DT>::op_softmax(tensor_t self, tensor_t y) {
         float beta = 0.0;
 
         auto shape_ = self->shape().vec();
+        if ( shape_.size() == 4 )  {
 
-        size_t batch = shape_[0];
-        size_t heads = shape_[1];
-        size_t tokens = shape_[2];
+            size_t batch = shape_[0];
+            size_t heads = shape_[1];
+            size_t tokens = shape_[2];
+            size_t hidden = shape_[3];
 
-        void* xdata = data();
-        void* ydata = y->cuda_float()->data();
+            void* xdata = data();
+            void* ydata = y->cuda_float()->data();
 
-        auto xdesc = create_cudnn_td_with({ batch * heads * tokens, tokens, 1, 1});
-        auto ydesc = create_cudnn_td_with({ batch * heads * tokens, tokens, 1, 1});
-        CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
-                                          CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE,
-                                          &alpha, xdesc, xdata, &beta, ydesc, ydata) );
+            auto xdesc = create_cudnn_td_with({ batch * heads * tokens, hidden, 1, 1});
+            auto ydesc = create_cudnn_td_with({ batch * heads * tokens, hidden, 1, 1});
+            CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
+                                            CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE,
+                                            &alpha, xdesc, xdata, &beta, ydesc, ydata) );
 
-        return OP_OK;
+            return OP_OK;
+        }
+
+        if ( shape_.size() == 2 )  {
+            size_t number = shape_[0];
+            size_t tokens = shape_[1];
+
+            void* xdata = data();
+            void* ydata = y->cuda_float()->data();
+
+            auto xdesc = create_cudnn_td_with({ number, tokens, 1, 1});
+            auto ydesc = create_cudnn_td_with({ number, tokens, 1, 1});
+            CUDNN_CHECK( cudnnSoftmaxForward( ComputingContext::cudnn_handle,
+                                            CUDNN_SOFTMAX_ACCURATE, CUDNN_SOFTMAX_MODE_INSTANCE,
+                                            &alpha, xdesc, xdata, &beta, ydesc, ydata) );
+            return OP_OK;
+        }
     }
     return OP_TODO_ERROR;
 }
@@ -583,7 +602,7 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
         int* mask = (int *)mask_->cpu_int()->data();
         for (int b = 0;  b < batch; b++) {
             int* m = &mask[b * tokens];
-            int target = 0;
+            int target = tokens - 1;
             for ( int i = 0; i < tokens - 1; i++) {
                 if ( m[i + 1] == 0 ) {
                     target = i;
@@ -620,6 +639,50 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
     }
     return OP_TODO_ERROR;
 }
+
+template<DataType DT>
+ComputingReturn  CUDATensor<DT>::op_sampling_top_p(tensor_t self, tensor_t mask_, tensor_t ids_, float temp, float top_p) {
+    if ( DT != DataType::Float ) {
+        return OP_INPUT_ERROR;
+    }
+
+    float scale = 1.0 / temp;
+    self->op_scale(self, scale);
+    self->op_softmax(self, self);
+
+    int batch = self->shape()[0];
+    int vocab_size = self->shape()[1];
+    int tokens = mask_->shape()[1];
+
+    std::vector<float> logits;
+    std::vector< std::pair<int, float> > scores;
+    logits.resize(vocab_size);
+    scores.resize(vocab_size);
+
+    auto stream = ComputingContext::cuda_stream;
+    int* mask = (int *)mask_->cpu_int()->data();
+    for (int b = 0;  b < batch; b++) {
+        int* m = &mask[b * tokens];
+        int target = tokens - 1;
+        for ( int i = 0; i < tokens - 1; i++) {
+            if ( m[i + 1] == 0 ) {
+                target = i + 1;
+                break;
+            }
+        }
+
+        float* logits_ = (float *)self->cuda_float()->data() + b * vocab_size;
+        CUDA_CHECK(cudaMemcpyAsync(logits.data(), logits_, vocab_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
+        for(size_t i = 0; i < vocab_size; i++) {
+            scores[i].first = 0;
+            scores[i].second = logits[i];
+        }
+
+    }
+
+    return OP_OK;
+}
+
 
 template<DataType DT>
 std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t self, tensor_t ids_, tensor_t mask_, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) {

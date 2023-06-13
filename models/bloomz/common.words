@@ -2,7 +2,9 @@
 4096                    "HIDDEN_SIZE"           !
 32                      "HEADS_NUM"             !
 128                     "HEAD_HIDDEN"           !
-1e-08                   "LN_EPS"                !
+1e-05                   "LN_EPS"                !
+0.5                     "SAMPLING_TEMP"         !
+0.90                    "TOP_P"                 !
 
 %def create_variable
     1 "cuda" rot op.create  "_var_"     !

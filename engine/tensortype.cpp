@@ -147,6 +147,13 @@ ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_
     op_check(ret, "last_logits");
 }
 
+ComputingReturn TensorType::op_sampling_top_p(tensor_t self, tensor_t mask, tensor_t ids, float temp, float top_p) {
+    br_assert(self.get() == this, "can't be here!");
+    br_assert(ids->dtype() == DataType::Int, "sampling output type Int");
+    auto ret = impl()->op_sampling_top_p(self, mask, ids, temp, top_p);
+    op_check(ret, "sampling_top_p");
+}
+
 std::variant<ComputingReturn, float> TensorType::op_loss_backward(tensor_t self, tensor_t ids, tensor_t mask, tensor_t lm_head, tensor_t all_logits, tensor_t x_g, tensor_t lm_head_g) {
     br_assert(self.get() == this, "can't be here!");
 
