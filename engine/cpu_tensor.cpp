@@ -215,6 +215,19 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_bcast(tensor_t self, int root) {
     return OP_TODO_ERROR;
 }
 
+template <DataType _DTYPE_>
+ComputingReturn CPUTensor<_DTYPE_>::io_mpi_send(tensor_t self, int dst) {
+    if ( _DTYPE_ == DataType::Float ) {
+        MPI_Send(data(), self->items(), MPI_FLOAT, dst, 0, MPI_COMM_WORLD);
+        return OP_OK;
+    }
+    if ( _DTYPE_ == DataType::Int ) {
+        MPI_Send(data(), self->items(), MPI_INT, dst, 0, MPI_COMM_WORLD);
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CPUTensor<DataType::Float>* tensor = new CPUTensor<DataType::Float>(shape);

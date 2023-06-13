@@ -237,10 +237,16 @@ ComputingReturn TensorType::io_mpi_recv(tensor_t self, int source) {
     op_check(ret, "mpi_recv");
 }
 
+ComputingReturn TensorType::io_mpi_send(tensor_t self, int dst) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_mpi_send(self, dst);
+    op_check(ret, "mpi_send");
+}
+
 ComputingReturn TensorType::io_nccl_recv(tensor_t self, int source) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->io_nccl_recv(self, source);
-    op_check(ret, "mpi_recv");
+    op_check(ret, "nccl_recv");
 }
 
 ComputingReturn TensorType::io_nccl_send(tensor_t self, int dst) {

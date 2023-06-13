@@ -218,6 +218,18 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(LastLogits)
     };
 
+    struct SamplingTopP : public NativeWord {
+        void run(Stack& stack) override {
+            float top_p = stack.pop_number();
+            float temp = stack.pop_number();
+            tensor_t ids = stack.pop_tensor();
+            tensor_t mask = stack.pop_tensor();
+            tensor_t logits = stack.pop_tensor();
+            logits->op_sampling_top_p(logits, mask, ids, temp, top_p);
+        }
+        NWORD_CREATOR_DEFINE_LR(SamplingTopP);
+    };
+
     struct LossBackward : public NativeWord {
         void run(Stack& stack) override {
             tensor_t lm_head_g = stack.pop_tensor();
@@ -350,6 +362,15 @@ namespace io {
         NWORD_CREATOR_DEFINE_LR(MPIRecv)
     };
 
+    struct MPISend : public NativeWord {
+        void run(Stack& stack) override {
+            int dst = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_mpi_send(x, dst);
+        }
+        NWORD_CREATOR_DEFINE_LR(MPISend)
+    };
+
     struct MPIBcast : public NativeWord {
         void run(Stack& stack) override {
             int root = stack.pop_number();
@@ -385,6 +406,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.save", io::Save::creator );
     env.insert_native_word("io.mpi.bcast", io::MPIBcast::creator );
     env.insert_native_word("io.mpi.recv", io::MPIRecv::creator );
+    env.insert_native_word("io.mpi.send", io::MPISend::creator );
     env.insert_native_word("io.nccl.send", io::NcclSend::creator );
     env.insert_native_word("io.nccl.recv", io::NcclRecv::creator );
 
@@ -407,6 +429,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.attn", nn::Attn::creator);
     env.insert_native_word("op.gelu", nn::Gelu::creator);
     env.insert_native_word("op.last_logits", nn::LastLogits::creator);
+    env.insert_native_word("op.sampling_top_p", nn::SamplingTopP::creator);
     env.insert_native_word("op.loss_backward", nn::LossBackward::creator);
     env.insert_native_word("op.layernorm_backward", nn::LayernormBackward::creator);
     env.insert_native_word("op.linear_backward", nn::LinearBackward::creator);

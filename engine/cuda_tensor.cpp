@@ -654,6 +654,7 @@ ComputingReturn  CUDATensor<DT>::op_sampling_top_p(tensor_t self, tensor_t mask_
     int vocab_size = self->shape()[1];
     int tokens = mask_->shape()[1];
 
+    std::vector<int> probs;
     std::vector<float> logits;
     std::vector< std::pair<int, float> > scores;
     logits.resize(vocab_size);
@@ -670,14 +671,35 @@ ComputingReturn  CUDATensor<DT>::op_sampling_top_p(tensor_t self, tensor_t mask_
                 break;
             }
         }
+        int* dst = (int *)ids_->cpu_int()->data() + b * tokens;
+        dst = dst + target;
 
         float* logits_ = (float *)self->cuda_float()->data() + b * vocab_size;
         CUDA_CHECK(cudaMemcpyAsync(logits.data(), logits_, vocab_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
         for(size_t i = 0; i < vocab_size; i++) {
-            scores[i].first = 0;
+            scores[i].first = i;
             scores[i].second = logits[i];
         }
 
+        std::sort( scores.begin(), scores.end(),
+                [](const std::pair<int, float> & a, const std::pair<int, float> & b) {
+                    return a.second > b.second;
+                });
+
+        float sum = 0.0;
+        probs.clear();
+        for (size_t i = 0; i < vocab_size; i++) {
+            probs.push_back( scores[i].first );
+            sum = sum + scores[i].second;
+            if ( sum >= top_p ) {
+                break;
+            }
+        }
+
+        // do random sampling ...
+        std::discrete_distribution<> dist(probs.begin(), probs.end());
+        int idx = dist( *ComputingContext::rng );
+        *dst = scores[idx].first;
     }
 
     return OP_OK;

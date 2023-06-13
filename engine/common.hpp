@@ -2,6 +2,7 @@
 #define _COMMON_HPP_
 
 #include <vector>
+#include <random>
 #include <iostream>
 #include <fstream>
 #include <cublas_v2.h>
@@ -11,6 +12,7 @@
 #include <cuda_runtime.h>
 #include <mpi.h>
 #include <nccl.h>
+
 
 #define COMPLAIN_ERROR_AND_EXIT(what, status) \
     do { \

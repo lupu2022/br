@@ -43,6 +43,11 @@ struct ChatApplication {
                 MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(masks.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
+
+
+                MPI_Recv(ids.data(), len, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                std::cout << "===> " << tokenizer_->decode( ids) << std::endl;
             }
         }
 

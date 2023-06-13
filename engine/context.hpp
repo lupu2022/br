@@ -15,6 +15,7 @@ struct ComputingContext {
     static void* cuda_workspace;
     static void* local_workspace;
     static size_t workspace_size;
+    static std::mt19937* rng;
 
     static void boot(int cud);
     static void shutdown();

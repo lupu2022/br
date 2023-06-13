@@ -124,8 +124,6 @@
     "ids"  @    "ids_" @ op.copy
     "mask" @    "mask_" @ op.copy
 
-     
-
     "alibi" @ op.alibi
     "mask" @ "causal_mask" @ op.causal_mask 
 
@@ -151,8 +149,8 @@
         "xb" @ "mask_" @ "lm_head.weight" @ "all_logits" @  op.last_logits 
     }
     
-    "all_logits" @ io.dump
-
     ;; sampling using tempture & top_p
+    "all_logits" @ "mask_" @ "ids_" @ "TEMPERATURE" @ "TOP_P" @ op.sampling_top_p
 
+    "ids_" @ 0 io.mpi.send
 %end

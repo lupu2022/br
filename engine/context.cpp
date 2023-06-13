@@ -14,6 +14,7 @@ cudnnHandle_t ComputingContext::cudnn_handle = nullptr;
 void* ComputingContext::cuda_workspace = nullptr;
 void* ComputingContext::local_workspace = nullptr;
 size_t ComputingContext::workspace_size = 0;
+std::mt19937* ComputingContext::rng = nullptr;
 
 void ComputingContext::boot(int cud) {
     cuda_device = cud;
@@ -31,6 +32,8 @@ void ComputingContext::boot(int cud) {
     workspace_size = 1024 * 1024 * 32 * 4;
     CUDA_CHECK( cudaMalloc(&cuda_workspace, workspace_size) );
     local_workspace = malloc( workspace_size );
+
+    rng = new std::mt19937(1979);
 }
 
 void ComputingContext::shutdown() {
