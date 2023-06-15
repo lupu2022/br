@@ -33,6 +33,8 @@ struct CUDATensor : public TransformerComputing {
             dtype = CUDNN_DATA_FLOAT;
         } else if ( _DTYPE_ == DataType::FP16 ) {
             dtype = CUDNN_DATA_HALF;
+        } else if ( _DTYPE_ == DataType::Int ) {
+            dtype = CUDNN_DATA_INT32;
         } else {
             br_panic("cudnn don't support!");
         }

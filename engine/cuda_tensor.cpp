@@ -138,6 +138,30 @@ ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
         CUDA_CHECK(cudaMemcpyAsync(y, x, src.size() * sizeof(float), cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
+    if ( DT == DataType::Int ) {
+        std::vector<int> src;
+        read_data(fileName, src);
+
+        br_assert(src.size() == self->items() , "loaded data must has same size");
+        void* x = src.data();
+        void* y = data();
+
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(y, x, src.size() * sizeof(int), cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
+    if ( DT == DataType::FP16 ) {
+        std::vector<unsigned short> src;
+        read_data(fileName, src);
+
+        br_assert(src.size() == self->items() , "loaded data must has same size");
+        void* x = src.data();
+        void* y = data();
+
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(y, x, src.size() * sizeof(unsigned short), cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
 
     return OP_TODO_ERROR;
 }
@@ -150,7 +174,18 @@ ComputingReturn CUDATensor<DT>::io_nccl_send(tensor_t self, int dst) {
                              ComputingContext::cuda_stream) );
         return OP_OK;
     }
-
+    if ( DT == DataType::FP16 ) {
+        NCCL_CHECK( ncclSend(data(), self->items(), ncclFloat16, dst,
+                             CollectiveContext::nccl_comm,
+                             ComputingContext::cuda_stream) );
+        return OP_OK;
+    }
+    if ( DT == DataType::Int ) {
+        NCCL_CHECK( ncclSend(data(), self->items(), ncclInt32, dst,
+                             CollectiveContext::nccl_comm,
+                             ComputingContext::cuda_stream) );
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
 
@@ -163,50 +198,51 @@ ComputingReturn CUDATensor<DT>::io_nccl_recv(tensor_t self, int dst) {
         return OP_OK;
     }
 
+    if ( DT == DataType::FP16 ) {
+        NCCL_CHECK( ncclRecv(data(), self->items(), ncclFloat16, dst,
+                             CollectiveContext::nccl_comm,
+                             ComputingContext::cuda_stream) );
+        return OP_OK;
+    }
+
+    if ( DT == DataType::Int ) {
+        NCCL_CHECK( ncclRecv(data(), self->items(), ncclInt32, dst,
+                             CollectiveContext::nccl_comm,
+                             ComputingContext::cuda_stream) );
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_zero(tensor_t self) {
-    if ( DT == DataType::Float ) {
-        void *dst = data();
-        int n = self->items();
-        CUDA_CHECK( cudaMemset(dst, 0, n * sizeof(float)) );
-        return OP_OK;
-    }
-
-    return OP_TODO_ERROR;
+    void *dst = data();
+    int n = self->items();
+    CUDA_CHECK( cudaMemset(dst, 0, n * DataType_size(DT) ) );
+    return OP_OK;
 }
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_scale(tensor_t self, float scale) {
-    if ( DT == DataType::Float  || DT == DataType::FP16 ) {
-        void *dst = data();
-        auto desc = create_cudnn_td_with( self->shape().vec() );
-        CUDNN_CHECK( cudnnScaleTensor( ComputingContext::cudnn_handle,
-                                     desc,
-                                     dst,
-                                     &scale) );
-        return OP_OK;
-    }
-    return OP_TODO_ERROR;
+    void *dst = data();
+    auto desc = create_cudnn_td_with( self->shape().vec() );
+    CUDNN_CHECK( cudnnScaleTensor( ComputingContext::cudnn_handle,
+                                    desc,
+                                    dst,
+                                    &scale) );
+    return OP_OK;
 }
-
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_fill(tensor_t self, float value) {
-    if ( DT == DataType::Float ||  DT == DataType::FP16 ) {
-        float* dst = (float *)data();
-        auto desc = create_cudnn_td_with( {self->items()} );
-        CUDNN_CHECK( cudnnSetTensor( ComputingContext::cudnn_handle,
-                                     desc,
-                                     dst,
-                                     &value) );
-
-        return OP_OK;
-    }
-
-    return OP_TODO_ERROR;
+    float* dst = (float *)data();
+    auto desc = create_cudnn_td_with( {self->items()} );
+    CUDNN_CHECK( cudnnSetTensor( ComputingContext::cudnn_handle,
+                                    desc,
+                                    dst,
+                                    &value) );
+    return OP_OK;
 }
 
 template<DataType DT>
