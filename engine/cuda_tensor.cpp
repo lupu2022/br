@@ -1,7 +1,7 @@
 #include <cmath>
 #include <utility>
 #include <algorithm>
-#include <openblas/cblas.h>
+#include <cblas.h>
 #include <kernels.hpp>
 
 #include "common.hpp"

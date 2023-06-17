@@ -26,8 +26,6 @@ add_library(engine STATIC ${tt_files})
 
 include_directories(../install/include/kernels/)
 include_directories(../install/include/tokenizers/)
-include_directories(/home/teaonly/opt/nccl/include)
-include_directories(/home/teaonly/opt/blas/include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi)
 include_directories(/usr/local/cuda/include)

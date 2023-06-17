@@ -3,8 +3,6 @@
 FLAGS = -Wall -O3 -Wno-maybe-uninitialized -fopenmp 
 INC = -I../install/include/kernels \
 	  -I../install/include/engine \
-	  -I/home/teaonly/opt/nccl/include \
-	  -I/home/teaonly/opt/blas/include \
 	  -I/usr/local/cuda/include \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include \
 	  -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi 
