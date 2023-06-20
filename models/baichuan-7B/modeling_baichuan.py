@@ -17,7 +17,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .configuration_baichuan import BaiChuanConfig
 from transformers import PreTrainedModel, add_start_docstrings
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, \
@@ -32,6 +31,8 @@ import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
+#from .configuration_baichuan import BaiChuanConfig
+import configuration_baichuan
 
 logger = logging.get_logger(__name__)
 
@@ -158,7 +159,7 @@ class MLP(nn.Module):
 class Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: BaiChuanConfig):
+    def __init__(self, config: configuration_baichuan.BaiChuanConfig):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
@@ -250,7 +251,7 @@ class Attention(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, config: BaiChuanConfig):
+    def __init__(self, config: configuration_baichuan.BaiChuanConfig):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.self_attn = Attention(config=config)
@@ -318,7 +319,7 @@ class DecoderLayer(nn.Module):
 
 
 class PreTrainedModel(PreTrainedModel):
-    config_class = BaiChuanConfig
+    config_class = configuration_baichuan.BaiChuanConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _no_split_modules = ["DecoderLayer"]
@@ -348,7 +349,7 @@ class Model(PreTrainedModel):
         config: BaiChuanConfig
     """
 
-    def __init__(self, config: BaiChuanConfig):
+    def __init__(self, config: configuration_baichuan.BaiChuanConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
@@ -669,3 +670,41 @@ class BaiChuanForCausalLM(PreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
+
+def save_baichuan():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    checkpoint = "baichuan-inc/baichuan-7B"
+    model = AutoModelForCausalLM.from_pretrained(checkpoint, device_map="auto", trust_remote_code=True)
+
+    path = "pth/"
+
+    torch.save(model.lm_head.state_dict(), path + "lm_head.pth");
+    torch.save(model.model.embed_tokens.state_dict(), path + "embed_tokens.pth");
+    torch.save(model.model.norm.state_dict(), path + "norm.pth");
+
+    for i in range(0, 32):
+        hname = "h_" + str(i) + ".pth";
+        layer = model.model.layers[i];
+        print("saving.. " + str(i)  + " attention");
+        torch.save(layer.state_dict(), path + hname);
+
+def load_baichuan():
+    print("Creating a empty model...")
+    config = configuration_baichuan.BaiChuanConfig();
+    model = BaiChuanForCausalLM(config);
+    model.eval();
+
+    print("Loading embeddings...")
+    path = "pth/"
+
+    model.lm_head.load_state_dict( torch.load( path + "lm_head.pth") );
+    model.model.embed_tokens.load_state_dict( torch.load( path + "embed_tokens.pth") );
+    model.model.norm.load_state_dict( torch.load( path + "norm.pth") );
+
+    for i in range(32):
+        hname = "h_" + str(i) + ".pth";
+        print("load.. " + str(i)  + " attention");
+        model.model.layers[i].load_state_dict( torch.load(path + hname) );
+
+    return config, model

@@ -832,7 +832,7 @@ class BloomForCausalLM(nn.Module):
         return self._convert_to_bloom_cache(reordered_past)
 
 
-def save_bloomz_7b1_mt():
+def save_baichuan_7b():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     checkpoint = "bigscience/bloomz-7b1-mt"
