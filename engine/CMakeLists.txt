@@ -26,11 +26,12 @@ add_library(engine STATIC ${tt_files})
 
 include_directories(../install/include/kernels/)
 include_directories(../install/include/tokenizers/)
+include_directories(/usr/local/include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi)
 include_directories(/usr/local/cuda/include)
 	
-target_link_libraries(engine cudnn cublas cudart cublasLt nccl openbias)
+target_link_libraries(engine cudnn cublas cudart cublasLt nccl openbias sentencepiece)
 
 install(TARGETS engine DESTINATION lib)
 install(PROGRAMS 

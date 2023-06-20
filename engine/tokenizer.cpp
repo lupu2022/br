@@ -2,10 +2,12 @@
 #include <fstream>
 #include <map>
 
+#include <sentencepiece_processor.h>
 #include <tokenizers_c.h>
 
 #include "common.hpp"
 #include "tokenizer.hpp"
+
 
 inline std::string fileToString(const char* filename) {
     std::ifstream t(filename);
@@ -80,8 +82,62 @@ struct BloomzTokenizer : public Tokenizer {
     }
 };
 
+struct BaichuanTokenizer : public Tokenizer {
+    sentencepiece::SentencePieceProcessor processor;
+
+    BaichuanTokenizer( const char* file_name) {
+        const auto status = processor.Load(file_name);
+        if (!status.ok()) {
+            br_panic("Can't crate BaichuanTokenizer from model file!");
+        }
+    }
+    ~BaichuanTokenizer() {
+    }
+
+    virtual int token_pad() override {
+        return 0;
+    }
+
+    virtual int token_unk() override {
+        return 0;
+    }
+
+    virtual std::vector<int> encode(const std::string& text, bool bos) override {
+        std::vector<int> res;
+        processor.Encode(text, &res);
+        return res;
+    }
+
+    virtual std::string decode(const int id) override {
+        std::vector<int> ids = { id };
+        std::string text;
+        processor.Decode(ids, &text);
+        return text;
+    }
+
+    virtual std::string decode(const std::vector<int>& ids) override {
+        std::string text;
+        processor.Decode(ids, &text);
+        return text;
+    }
+};
+
+
+inline bool ends_with(std::string const & value, std::string const & ending) {
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 Tokenizer* build_tokenizer(const char* file_name) {
-    return new BloomzTokenizer(file_name);
+    std::string fname = file_name;
+    if ( ends_with(fname, ".json") ) {
+        return new BloomzTokenizer(file_name);
+    }
+    if( ends_with(fname, ".model") ) {
+        return new BaichuanTokenizer(file_name);
+    }
+    br_panic("Can't create tokenizer from file");
+    return nullptr;
 }
 
 }

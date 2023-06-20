@@ -5,22 +5,9 @@
 
 #include <br_engine.hpp>
 
-/*
-153772 -> 'Translate'
- 17959 -> ' "H'
-    76 -> 'i'
- 98257 -> ', '
- 20263 -> 'how'
-  1306 -> ' are'
-  1152 -> ' you'
-  2040 -> '?'
-     5 -> '"'
-   361 -> ' in'
-104229 -> ' 中文'
-    29 -> ':'
-*/
 int main(int argc, const char* argv[]) {
-    auto tokenizer = br::build_tokenizer("../models/bloomz/tokenizer.json");
+    //auto tokenizer = br::build_tokenizer("../models/bloomz/tokenizer.json");
+    auto tokenizer = br::build_tokenizer("../models/baichuan-7B/tokenizer.model");
 
     //std::string text = "Translate \"Hi, how are you?\" in 中文:";
     std::string text = argv[1];
