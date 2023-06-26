@@ -676,14 +676,11 @@ def dump_binary_fp32():
     path_src = "pth/"
     path_dst = "weights/"
 
-    def dump_one_file(name, with_bias = False):
+    def dump_one_file(name):
         print("Dumping ..." + name );
         sdict = torch.load(path_src + name + ".pth");
         vdata = sdict["weight"].cpu().float().numpy().flatten().astype('float32')
         vdata.tofile(path_dst + name + ".bin");
-        if ( with_bias ):
-            vdata = sdict["bias"].cpu().float().numpy().flatten().astype('float32')
-            vdata.tofile(path_dst + name + ".bin");
 
     def dump_layer_one_file(sdict, hname, blkname):
         vdata = sdict[blkname];

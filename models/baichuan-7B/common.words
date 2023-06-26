@@ -1,0 +1,449 @@
+64000                   "VOCAB_SIZE"            !
+4096                    "HIDDEN_SIZE"           !
+11008                   "INTERMEDIATE_SIZE"     !
+32                      "HEADS_NUM"             !
+128                     "HEAD_HIDDEN"           !
+4096                     "MAX_POSITION_EMB"      !
+
+1e-05                   "LN_EPS"                !
+0.5                     "TEMPERATURE"           !
+0.90                    "TOP_P"                 !
+
+%def create_variable
+    1 "cuda" rot op.create  "_var_"     !
+    
+    dup dup dup
+    
+    1 "cpu"  "int"  op.create  "_ids_"     !
+    1 "cpu"  "int"  op.create  "_mask_"    !
+
+    1 "cuda" "int" op.create "_ids" !
+    1 "cuda" "int" op.create "_mask" !
+%end
+
+%def create_input_weight
+    $DTYPE !
+    $DEVICE !
+
+    "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @ $DTYPE @  op.create "embed_tokens.weight"  !
+
+    $DTYPE  !!
+    $DEVICE !!
+%end
+
+%def create_output_weight
+    $DTYPE !
+    $DEVICE !
+
+    "HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @  op.create  "norm.weight"  !
+    "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @ $DTYPE @ op.create "lm_head.weight" !
+
+    $DTYPE  !!
+    $DEVICE !!
+%end
+
+%def create_layer_weight
+    $DTYPE !
+    $DEVICE !
+
+    ("HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @)  op.create      "input_layernorm.weight"  !
+    ("HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @)  op.create  "post_attention_layernorm.weight"  !
+
+    ("HIDDEN_SIZE" @ 3 * "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create     "query_key_value.weight"  !
+    ;
+    ; dummy split to three tensors, 4096 * 4096 = 16777216
+    ;
+    ("query_key_value.weight" @ 0                       "HIDDEN_SIZE" @ dup 2 op.view)    "query.weight" !
+    ("query_key_value.weight" @ ("HIDDEN_SIZE" @ dup *)       "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight" !
+    ("query_key_value.weight" @ ("HIDDEN_SIZE" @ dup * 2 *) "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight" !
+    
+    ("HEADS_NUM" @ 2 * 1 $DEVICE @  $DTYPE @)  op.create  "rotary_emb.inv_freq" !
+    ("HIDDEN_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "o_proj.weight"  !
+
+    ("INTERMEDIATE_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "gate_proj.weight"  !
+    ("INTERMEDIATE_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "up_proj.weight"  !
+    ("HIDDEN_SIZE" @  "INTERMEDIATE_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "down.weight"  !
+
+    $DTYPE !!
+    $DEVICE !!
+%end
+
+%def load_input_weight
+    "Loading input weight..." echo 
+    
+    $weights_path ! 
+
+    "embed_tokens.weight" @
+    $weights_path @ "embed_tokens.bin" |
+    io.load
+
+    $weights_path !!
+
+    "Loaded input weight." echo
+%end
+
+%def load_output_weight
+    "Loading output weight..." echo 
+    
+    $weights_path ! 
+    
+    "norm.weight" @
+    $weights_path @ "norm.bin"  |
+    io.load
+
+    "lm_head.weight" @
+    $weights_path @ "lm_head.bin"  |
+    io.load
+
+    $weights_path !!
+
+    "Loaded output weight." echo
+%end
+
+%def load_layer_weight
+    $weights_path ! 
+    
+    "Loading... " $weights_path @ | echo
+
+    {
+        "input_layernorm.weight" @
+        $weights_path @  ".input_layernorm.weight.bin" | 
+        io.load
+   
+        "input_layernorm.bias" @
+        $weights_path @  ".input_layernorm.bias.bin" | 
+        io.load
+    }
+
+    {
+        "query_key_value.weight" @
+        $weights_path @  ".query_key_value.weight.bin" | 
+        io.load
+   
+        "query_key_value.bias" @
+        $weights_path @  ".query_key_value.bias.bin" | 
+        io.load
+    }
+
+    {
+        "dense.weight" @
+        $weights_path @  ".dense.weight.bin" | 
+        io.load
+   
+        "dense.bias" @
+        $weights_path @  ".dense.bias.bin" | 
+        io.load
+    }
+
+    {
+        "dense_h_to_4h.weight" @
+        $weights_path @  ".dense_h_to_4h.weight.bin" | 
+        io.load
+   
+        "dense_h_to_4h.bias" @
+        $weights_path @  ".dense_h_to_4h.bias.bin" | 
+        io.load
+    }
+    
+    {
+        "dense_4h_to_h.weight" @
+        $weights_path @  ".dense_4h_to_h.weight.bin" | 
+        io.load
+   
+        "dense_4h_to_h.bias" @
+        $weights_path @  ".dense_4h_to_h.bias.bin" | 
+        io.load
+    }
+
+    {
+        "post_attention_layernorm.weight" @
+        $weights_path @  ".post_attention_layernorm.weight.bin" | 
+        io.load
+   
+        "post_attention_layernorm.bias" @
+        $weights_path @  ".post_attention_layernorm.bias.bin" | 
+        io.load
+    }
+    
+    "Loaded " $weights_path @ | echo
+    
+    $weights_path !!
+%end
+
+%def sync_layer_clone
+    dup
+ 
+    #       "input_layernorm.weight" @  
+    0 #     "input_layernorm.weight" !
+    dup
+  
+    #       "input_layernorm.bias" @
+    0 #     "input_layernorm.bias" ! 
+    dup
+
+    #       "query_key_value.weight" @
+    0 #     "query_key_value.weight" !
+    dup
+
+    #       "query_key_value.bias" @
+    0 #     "query_key_value.bias" !
+    dup
+
+    #       "dense.weight" @
+    0 #     "dense.weight" !
+    dup  
+
+    #       "dense.bias" @
+    0 #     "dense.bias" ! 
+    dup
+
+    #       "dense_h_to_4h.weight" @
+    0 #     "dense_h_to_4h.weight" !
+    dup  
+
+    #       "dense_h_to_4h.bias" @
+    0 #     "dense_h_to_4h.bias" !
+    dup
+
+    #       "dense_4h_to_h.weight" @
+    0 #     "dense_4h_to_h.weight" !
+    dup    
+
+    #       "dense_4h_to_h.bias" @
+    0 #     "dense_4h_to_h.bias" !
+    dup
+  
+    #       "post_attention_layernorm.weight" @
+    0 #     "post_attention_layernorm.weight" !
+
+    #       "post_attention_layernorm.bias" @
+    0 #     "post_attention_layernorm.bias" !
+%end
+
+%def sync_layer_offload
+    dup
+ 
+    0 #        "input_layernorm.weight" @  
+    swap #     "input_layernorm.weight" @  op.copy
+    dup
+  
+    0 #        "input_layernorm.bias" @
+    swap #     "input_layernorm.bias" @    op.copy 
+    dup
+
+    0 #        "query_key_value.weight" @
+    swap #     "query_key_value.weight" @  op.copy
+    dup
+
+    0 #        "query_key_value.bias" @
+    swap #     "query_key_value.bias" @    op.copy
+    dup
+
+    0 #        "dense.weight" @
+    swap #     "dense.weight" @            op.copy
+    dup  
+
+    0 #        "dense.bias" @
+    swap #     "dense.bias" @              op.copy
+    dup
+
+    0 #        "dense_h_to_4h.weight" @
+    swap #     "dense_h_to_4h.weight" @    op.copy
+    dup  
+
+    0 #        "dense_h_to_4h.bias" @
+    swap #     "dense_h_to_4h.bias" @      op.copy
+    dup
+
+    0 #        "dense_4h_to_h.weight" @
+    swap #     "dense_4h_to_h.weight" @    op.copy
+    dup    
+
+    0 #        "dense_4h_to_h.bias" @
+    swap #     "dense_4h_to_h.bias" @      op.copy
+    dup
+  
+    0 #        "post_attention_layernorm.weight" @
+    swap #     "post_attention_layernorm.weight" @  op.copy
+
+    0 #        "post_attention_layernorm.bias" @
+    swap #     "post_attention_layernorm.bias" @    op.copy
+
+    0 #
+%end
+
+%def create_dynamic
+    $tokens !
+    $batch  !
+
+    "_ids_" @ 0  $batch @   $tokens @  2 op.view  "ids_" !
+    "_mask_" @ 0  $batch @   $tokens @  2 op.view  "mask_" !
+   
+    "_ids" @ 0  $batch @   $tokens @  2 op.view  "ids" !
+    "_mask" @ 0  $batch @  $tokens @  2 op.view  "mask" !
+
+    ;; xinput in GPU, xinput_ in CPU
+    {
+        "_var_" @ 0  $batch @   $tokens @  "HIDDEN_SIZE" @ 3 op.view  "xinput" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ * *
+        
+        dup
+        "_var_" @ swap  $batch @  $tokens @  "HIDDEN_SIZE" @ 3 op.view  "yout_g" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ * * +
+    }
+
+    ;; alibi in GPU
+    {
+        dup
+        "_var_" @ swap 1 "HEADS_NUM" @ 1 $tokens @ 4 op.view "alibi" !
+        "HEADS_NUM" @ $tokens @ * +
+    }
+
+    ;; causal mask in GPU
+    {
+        dup
+        "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "causal_mask"  !
+        $batch @ $tokens @ $tokens @ * * +
+    }
+
+    ;;  keep var in layer_norm, used for backward
+    {
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "input_ln_var" !
+        "HIDDEN_SIZE" @  +
+
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "post_ln_var" !
+        "HIDDEN_SIZE" @  +
+
+        dup
+        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "ln_mean" !
+        "HIDDEN_SIZE" @  +
+    }
+
+    ;; xa, xb, xc
+    {
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xa" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ya" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "za" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xb" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yb" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zb" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xc" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yc" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zc" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+    }
+
+    ;; xattn_in, xattn_out, kqv,  x4a, x4b, xll
+    {
+        dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_in" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xattn_out" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yattn_out" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xquery" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zquery" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yquery" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xkey" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zkey"  !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "ykey" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup dup dup
+        "_var_" @ swap $batch @ $tokens @ "HIDDEN_SIZE" @ 3 op.view "xvalue" !
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ "HEAD_HIDDEN" @ 4 op.view "zvalue" !
+        "_var_" @ swap $batch @ $tokens @ "HEADS_NUM" @ "HEAD_HIDDEN" @ 4 op.view "yvalue" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
+
+        dup
+        "_var_" @ swap $batch @ $tokens @ ("HIDDEN_SIZE" @ 4 *) 3 op.view "x4a" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+
+        dup
+        "_var_" @ swap $batch @ $tokens @ ("HIDDEN_SIZE" @ 4 *) 3 op.view "x4b" !
+        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+
+        "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
+    }
+
+    ;; output logits , shared with attn_in
+    {
+        "_var_" @ swap $batch @ "VOCAB_SIZE" @ 2 op.view  "all_logits" !
+    }
+
+    $tokens !!
+    $batch !!
+%end
+
+%def layer_forward
+    ;; layernorm for input
+    "xinput" @ "ln_mean" @ "input_ln_var" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xattn_in" @  "LN_EPS" @  op.layernorm
+
+    ;; get kqv & transpose
+    {
+        "xattn_in" @ "query.weight" @ "query.bias" @ "xa" @ op.linear
+        "xattn_in" @ "key.weight" @ "key.bias" @ "xb" @ op.linear
+        "xattn_in" @ "value.weight" @ "value.bias" @ "xc" @ op.linear
+
+        "ya" @ "zquery" @ op.transpos_0213
+        "yb" @ "zkey" @ op.transpos_0213
+        "yc" @ "zvalue" @ op.transpos_0213
+    }
+
+    ;; attention
+    {
+        ;; get query@key
+        "zquery" @  "zkey" @  "xll" @ op.querykey
+
+        ;; added alibi and apply causal_mask
+        "xll" @ "alibi" @ "xll" @ op.add
+        "xll" @ "causal_mask" @ "xll" @ op.add
+
+        ;; do softmax
+        "xll" @ "xll" @ op.softmax
+
+        ;; do attention and transpose back
+        "xll" @ "zvalue" @  "zc" @ op.attn          ;; attn -> zc
+        "zc" @ "yattn_out" @ op.transpos_0213
+    }
+
+    ;; do dense & residual
+    "xattn_out" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
+    "xb" @ "xinput" @ "xa" @ op.add
+
+    ;; post layernorm
+    "xa" @ "ln_mean" @ "post_ln_var" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
+
+    ;; MLP
+    {
+        ;; xa atteion output
+        ;; xb passed post layernorm
+        ;; 4h dense & glue
+
+        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4a" @ op.linear
+        "x4a" @ "x4b" @ op.gelu
+
+        ;; 4h dense
+        "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xc" @ op.linear
+
+        ;; residual
+        "xa" @ "xc" @ "xa" @ op.add
+    }
+%end
+
