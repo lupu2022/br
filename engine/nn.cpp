@@ -353,6 +353,27 @@ namespace io {
         NWORD_CREATOR_DEFINE_LR(Save)
     };
 
+    struct MPIRank : public NativeWord {
+        void run(Stack& stack) override {
+            stack.push_number( CollectiveContext::mpi_rank );
+        }
+        NWORD_CREATOR_DEFINE_LR(MPIRank)
+    };
+
+    struct PipeRank : public NativeWord {
+        void run(Stack& stack) override {
+            stack.push_number( CollectiveContext::pipe_rank );
+        }
+        NWORD_CREATOR_DEFINE_LR(PipeRank)
+    };
+
+    struct NcclRank : public NativeWord {
+        void run(Stack& stack) override {
+            stack.push_number( CollectiveContext::nccl_rank );
+        }
+        NWORD_CREATOR_DEFINE_LR(NcclRank)
+    };
+
     struct MPIRecv : public NativeWord {
         void run(Stack& stack) override {
             int source = stack.pop_number();
@@ -398,17 +419,40 @@ namespace io {
         NWORD_CREATOR_DEFINE_LR(NcclSend)
     };
 
+    struct PipeRead : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t x = stack.pop_tensor();
+            x->io_pipe_read(x);
+        }
+        NWORD_CREATOR_DEFINE_LR(PipeRead)
+    };
+
+    struct PipeWrite : public NativeWord {
+        void run(Stack& stack) override {
+            int dst = stack.pop_number();
+            tensor_t x = stack.pop_tensor();
+            x->io_pipe_write(x, dst);
+        }
+        NWORD_CREATOR_DEFINE_LR(PipeWrite)
+    };
+
 }
 
 void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.dump", io::Dump::creator );
     env.insert_native_word("io.load", io::Load::creator );
     env.insert_native_word("io.save", io::Save::creator );
+
+    env.insert_native_word("io.mpi_rank", io::MPIRank::creator );
+    env.insert_native_word("io.pipe_rank", io::PipeRank::creator );
+    env.insert_native_word("io.nccl_rank", io::NcclRank::creator );
     env.insert_native_word("io.mpi.bcast", io::MPIBcast::creator );
     env.insert_native_word("io.mpi.recv", io::MPIRecv::creator );
     env.insert_native_word("io.mpi.send", io::MPISend::creator );
     env.insert_native_word("io.nccl.send", io::NcclSend::creator );
     env.insert_native_word("io.nccl.recv", io::NcclRecv::creator );
+    env.insert_native_word("io.pipe.read", io::PipeRead::creator );
+    env.insert_native_word("io.pipe.write", io::PipeWrite::creator );
 
     env.insert_native_word("op.sync", nn::Sync::creator );
     env.insert_native_word("op.create", nn::Create::creator );

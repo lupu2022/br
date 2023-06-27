@@ -2,6 +2,7 @@
 #include <chrono>
 #include <tuple>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include <br_engine.hpp>
 
@@ -14,6 +15,12 @@ struct ChatApplication {
     ~ChatApplication() {
         delete tokenizer_;
     }
+
+    void write_all(const void* buf, size_t nbyte) {
+        br_assert( br::CollectiveContext::pipe_write(1, buf, nbyte) > 0, "write_all error");
+        br_assert( br::CollectiveContext::pipe_write(2, buf, nbyte) > 0, "write_all error");
+    }
+
     void run() {
         std::string text;
         while( readline(">> ", text) ) {
@@ -35,9 +42,10 @@ struct ChatApplication {
                     masks.push_back(0);
                 }
 
-                /*
                 len = (int)ids.size();
-                MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                write_all(&len, sizeof(int));
+
+                /*
                 MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(masks.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -49,8 +57,8 @@ struct ChatApplication {
             }
         }
 
-        //int n = -1;
-        //MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        int n = -1;
+        write_all(&n, sizeof(int));
     }
 
     bool readline(const std::string& prop, std::string& code) {
@@ -66,6 +74,7 @@ private:
 };
 
 void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cmd) {
+    /*
     {
         std::string all_code = br::fileToString("../models/baichuan-7B/common.words");
         all_code = all_code + br::fileToString("../models/baichuan-7B/inference.words");
@@ -84,53 +93,54 @@ void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cm
     MPI_Send(&ok, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
     br::DaG* target_cmd = env->build(main_cmd);
+    */
+
     for (;;) {
         int ids = -1;
-        MPI_Bcast(&ids, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        br::CollectiveContext::pipe_read(&ids, sizeof(int));;
+        std::cout << ids << std::endl;
         if ( ids <= 0 ) {
             break;
         }
-        env->stack().push_number(ids);
-        env->run( target_cmd );
     }
 
-    delete target_cmd;
+    //delete target_cmd;
 }
 
 int main(int argc, char* argv[] ) {
-    br::CollectiveContext::boot_fork(2);
+    br::CollectiveContext::boot_pipe(2);
 
-    if ( br::CollectiveContext::mpi_rank == 0) {
+    if ( br::CollectiveContext::pipe_rank == 0) {
         ChatApplication* app = new ChatApplication();
-
         app->run();
-
         delete app;
-    } else if ( br::CollectiveContext::mpi_rank == 1) {
+
+        // wait for all child processes finished
+        {
+            int status = 0;
+            while ( wait(&status) != -1) {
+            }
+        }
+    } else if ( br::CollectiveContext::pipe_rank == 1) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-
-        /*
         br::Enviroment* env = new br::Enviroment(16);
+
         br::load_nn_words(*env);
-
         do_inference(env, "init_gpu_0", "main_gpu_0");
-        delete env;
-        */
 
+        delete env;
         br::ComputingContext::shutdown();
         br::MemoryContext::shutdown();
-    } else if ( br::CollectiveContext::mpi_rank == 2) {
+    } else if ( br::CollectiveContext::pipe_rank == 2) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-        /*
         br::Enviroment* env = new br::Enviroment(16);
-        br::load_nn_words(*env);
 
+        br::load_nn_words(*env);
         do_inference(env, "init_gpu_1", "main_gpu_1");
 
         delete env;
-        */
         br::ComputingContext::shutdown();
         br::MemoryContext::shutdown();
     }

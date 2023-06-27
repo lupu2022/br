@@ -43,6 +43,12 @@ struct TransformerComputing {
     virtual ComputingReturn io_nccl_send(tensor_t self, int dst) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn io_pipe_read(tensor_t self) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn io_pipe_write(tensor_t self, int n) {
+        return OP_TODO_ERROR;
+    }
 
     virtual ComputingReturn op_zero(tensor_t self) {
         return OP_TODO_ERROR;

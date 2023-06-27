@@ -47,31 +47,38 @@ void ComputingContext::shutdown() {
 }
 
 /**************************************************************/
-
+int      CollectiveContext::current = -1;
 int      CollectiveContext::mpi_world = -1;
 int      CollectiveContext::mpi_rank = -1;
-int      CollectiveContext::current = -1;
+int      CollectiveContext::pipe_world = -1;
+int      CollectiveContext::pipe_rank = -1;
+int*     CollectiveContext::pipe_fds = nullptr;
 
 ncclUniqueId    CollectiveContext::nccl_id;
 ncclComm_t      CollectiveContext::nccl_comm = nullptr;
 int             CollectiveContext::nccl_rank = -1;
 int             CollectiveContext::nccl_world = -1;
 
-void CollectiveContext::boot_fork(int gpus) {
-    mpi_rank = 0;
+void CollectiveContext::boot_pipe(int gpus) {
+    pipe_rank = 0;
     ncclGetUniqueId(&nccl_id);
+
+    pipe_fds = (int *)malloc(sizeof(int) * 2 * (gpus + 1) );
+    for (int i = 0; i < gpus + 1; i++) {
+        br_assert( pipe(pipe_fds + i * 2) >= 0, "Can't create pipe between parent and child process!");
+    }
 
     for (int i = 0; i < gpus; i++) {
         int n = fork();
         if ( n == 0 ) {
-            mpi_rank = i + 1;
+            pipe_rank = i + 1;
             break;
         }
     }
 
-    if ( mpi_rank >= 1 ) {
+    if ( pipe_rank >= 1 ) {
         nccl_world = gpus;
-        nccl_rank = mpi_rank - 1;
+        nccl_rank = pipe_rank - 1;
 
         CUDA_CHECK( cudaSetDevice(nccl_rank) );
         NCCL_CHECK( ncclCommInitRank(&nccl_comm, nccl_world, nccl_id, nccl_rank) );
@@ -115,6 +122,25 @@ void CollectiveContext::shutdown() {
     if ( mpi_world != -1 ) {
         MPI_Finalize();
     }
+    for (int i = 0; i < pipe_world * 2; i++) {
+        close( pipe_fds[i] );
+    }
+}
+
+int CollectiveContext::pipe_write(const int n, const void *buf, size_t nbyte) {
+    if ( pipe_fds == nullptr ) {
+        br_panic("pipe_fds is note initialized!");
+    }
+    int fd = pipe_fds[n * 2 + 1];
+    return write(fd, buf, nbyte);
+}
+
+int CollectiveContext::pipe_read(void *buf, size_t nbyte) {
+    if ( pipe_fds == nullptr ) {
+        br_panic("pipe_fds is note initialized!");
+    }
+    int fd = pipe_fds[pipe_rank * 2 + 0];
+    return read(fd, buf, nbyte);
 }
 
 int CollectiveContext::now() {

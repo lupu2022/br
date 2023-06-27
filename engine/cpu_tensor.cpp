@@ -228,6 +228,24 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_send(tensor_t self, int dst) {
     return OP_TODO_ERROR;
 }
 
+template <DataType _DTYPE_>
+ComputingReturn CPUTensor<_DTYPE_>::io_pipe_read(tensor_t self) {
+    int ret = CollectiveContext::pipe_read(data(), self->items() * DataType_size(_DTYPE_));
+    if ( ret < 0 ) {
+        return OP_OUTPUT_ERROR;
+    }
+    return OP_OK;
+}
+
+template <DataType _DTYPE_>
+ComputingReturn CPUTensor<_DTYPE_>::io_pipe_write(tensor_t self, int n) {
+    int ret = CollectiveContext::pipe_write(n, data(), self->items() * DataType_size(_DTYPE_));
+    if ( ret < 0 ) {
+        return OP_OUTPUT_ERROR;
+    }
+    return OP_OK;
+}
+
 tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
     CPUTensor<DataType::Float>* tensor = new CPUTensor<DataType::Float>(shape);

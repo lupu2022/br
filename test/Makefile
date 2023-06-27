@@ -20,11 +20,8 @@ repl: repl.cpp
 tokenizer: tokenizer.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-train: train.cpp
-	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
-
 inference: inference.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
 clean:
-	rm -f repl tokenizer train inference
+	rm -f repl tokenizer inference

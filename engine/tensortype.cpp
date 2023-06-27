@@ -252,8 +252,21 @@ ComputingReturn TensorType::io_nccl_recv(tensor_t self, int source) {
 ComputingReturn TensorType::io_nccl_send(tensor_t self, int dst) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->io_nccl_send(self, dst);
-    op_check(ret, "mpi_send");
+    op_check(ret, "nccl_send");
 }
+
+ComputingReturn TensorType::io_pipe_read(tensor_t self) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_pipe_read(self);
+    op_check(ret, "pipe_read");
+}
+
+ComputingReturn TensorType::io_pipe_write(tensor_t self, int n) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->io_pipe_write(self, n);
+    op_check(ret, "pipe_write");
+}
+
 
 TensorType::~TensorType() {
     if ( impl_index() == ImplType::CUDA_FLOAT ) {

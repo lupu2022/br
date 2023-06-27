@@ -35,6 +35,8 @@ public:
     ComputingReturn io_mpi_bcast(tensor_t self, int root) override;
     ComputingReturn io_mpi_recv(tensor_t self, int source) override;
     ComputingReturn io_mpi_send(tensor_t self, int dst) override;
+    ComputingReturn io_pipe_read(tensor_t self) override;
+    ComputingReturn io_pipe_write(tensor_t self, int n) override;
 
     ComputingReturn op_zero(tensor_t self) override;
     ComputingReturn op_copy(tensor_t self, tensor_t dst) override;

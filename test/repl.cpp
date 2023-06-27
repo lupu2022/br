@@ -24,7 +24,7 @@ int main(int argc, char* argv[] ) {
         text = text + code + "\n";
     }
 
-    br::CollectiveContext::boot();
+    br::CollectiveContext::boot_pipe(0);
     br::MemoryContext::boot( MEM_CTX_SIZE );
     br::ComputingContext::boot( 0 );
 

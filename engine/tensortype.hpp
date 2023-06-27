@@ -303,6 +303,8 @@ public:
     ComputingReturn io_mpi_send(tensor_t self, int dst) override;
     ComputingReturn io_nccl_recv(tensor_t self, int source) override;
     ComputingReturn io_nccl_send(tensor_t self, int dst) override;
+    ComputingReturn io_pipe_read(tensor_t self) override;
+    ComputingReturn io_pipe_write(tensor_t self, int n) override;
 
 private:
     // basic info about tensor

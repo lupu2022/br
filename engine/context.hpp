@@ -25,15 +25,22 @@ struct CollectiveContext {
     static int      current;
     static int      mpi_world;
     static int      mpi_rank;
+    static int      pipe_world;
+    static int      pipe_rank;
+    static int*     pipe_fds;
 
     static ncclComm_t      nccl_comm;
     static ncclUniqueId    nccl_id;
     static int             nccl_rank;
     static int             nccl_world;
 
-    static void boot_fork(int gpus);
+    static void boot_pipe(int gpus);
     static void boot_mpi(int argc, char* argv[], int gpus);
     static void shutdown();
+
+    static int pipe_write(const int n, const void *buf, size_t nbyte);
+    static int pipe_read(void* buf, size_t nbyte);
+
     static int now();
 };
 

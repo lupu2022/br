@@ -528,7 +528,7 @@ namespace base {
     struct Echo : public NativeWord {
         void run(Stack& stack) override {
             auto msg = stack.pop_string();
-            std::cout << CollectiveContext::mpi_rank << ":" << CollectiveContext::now()  << "\t" <<  msg << std::endl;
+            std::cout << "[" << CollectiveContext::mpi_rank << ":" << CollectiveContext::pipe_rank << ":" << CollectiveContext::nccl_rank << "@" << CollectiveContext::now()  << "] \t" <<  msg << std::endl;
         }
         NWORD_CREATOR_DEFINE_LR(Echo)
     };
