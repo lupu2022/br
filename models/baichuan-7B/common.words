@@ -62,7 +62,7 @@
 
     ("INTERMEDIATE_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "gate_proj.weight"  !
     ("INTERMEDIATE_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "up_proj.weight"  !
-    ("HIDDEN_SIZE" @  "INTERMEDIATE_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "down.weight"  !
+    ("HIDDEN_SIZE" @  "INTERMEDIATE_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "down_proj.weight"  !
 
     $DTYPE !!
     $DEVICE !!
@@ -104,67 +104,54 @@
     $weights_path ! 
     
     "Loading... " $weights_path @ | echo
-
     {
         "input_layernorm.weight" @
         $weights_path @  ".input_layernorm.weight.bin" | 
         io.load
-   
-        "input_layernorm.bias" @
-        $weights_path @  ".input_layernorm.bias.bin" | 
+    }
+    
+    {
+        "post_attention_layernorm.weight" @
+        $weights_path @  ".post_attention_layernorm.weight.weight.bin" | 
         io.load
     }
 
     {
         "query_key_value.weight" @
-        $weights_path @  ".query_key_value.weight.bin" | 
-        io.load
-   
-        "query_key_value.bias" @
-        $weights_path @  ".query_key_value.bias.bin" | 
-        io.load
-    }
-
-    {
-        "dense.weight" @
-        $weights_path @  ".dense.weight.bin" | 
-        io.load
-   
-        "dense.bias" @
-        $weights_path @  ".dense.bias.bin" | 
-        io.load
-    }
-
-    {
-        "dense_h_to_4h.weight" @
-        $weights_path @  ".dense_h_to_4h.weight.bin" | 
-        io.load
-   
-        "dense_h_to_4h.bias" @
-        $weights_path @  ".dense_h_to_4h.bias.bin" | 
+        $weights_path @  ".self_attn.W_pack.weight.bin" | 
         io.load
     }
     
     {
-        "dense_4h_to_h.weight" @
-        $weights_path @  ".dense_4h_to_h.weight.bin" | 
-        io.load
-   
-        "dense_4h_to_h.bias" @
-        $weights_path @  ".dense_4h_to_h.bias.bin" | 
+        "rotary_emb.inv_freq" @
+        $weights_path @  ".self_attn.rotary_emb.inv_freq.bin" | 
         io.load
     }
 
     {
-        "post_attention_layernorm.weight" @
-        $weights_path @  ".post_attention_layernorm.weight.bin" | 
+        "o_proj.weight" @
+        $weights_path @  ".self_attn.o_proj.weight..bin" | 
         io.load
-   
-        "post_attention_layernorm.bias" @
-        $weights_path @  ".post_attention_layernorm.bias.bin" | 
+    }
+
+    {
+        "gate_proj.weight" @
+        $weights_path @  ".mlp.gate_proj.weight.bin" | 
         io.load
     }
     
+    {
+        "up_proj.weight" @
+        $weights_path @  ".mlp.up_proj.weight.bin" | 
+        io.load
+    }
+    
+    {
+        "down_proj.weight" @
+        $weights_path @  ".mlp.down_proj.weight.bin" | 
+        io.load
+    }
+
     "Loaded " $weights_path @ | echo
     
     $weights_path !!
@@ -172,102 +159,68 @@
 
 %def sync_layer_clone
     dup
- 
     #       "input_layernorm.weight" @  
     0 #     "input_layernorm.weight" !
+    
     dup
-  
-    #       "input_layernorm.bias" @
-    0 #     "input_layernorm.bias" ! 
-    dup
-
     #       "query_key_value.weight" @
     0 #     "query_key_value.weight" !
+    
     dup
-
-    #       "query_key_value.bias" @
-    0 #     "query_key_value.bias" !
-    dup
-
-    #       "dense.weight" @
-    0 #     "dense.weight" !
-    dup  
-
-    #       "dense.bias" @
-    0 #     "dense.bias" ! 
-    dup
-
-    #       "dense_h_to_4h.weight" @
-    0 #     "dense_h_to_4h.weight" !
-    dup  
-
-    #       "dense_h_to_4h.bias" @
-    0 #     "dense_h_to_4h.bias" !
-    dup
-
-    #       "dense_4h_to_h.weight" @
-    0 #     "dense_4h_to_h.weight" !
-    dup    
-
-    #       "dense_4h_to_h.bias" @
-    0 #     "dense_4h_to_h.bias" !
-    dup
-  
     #       "post_attention_layernorm.weight" @
     0 #     "post_attention_layernorm.weight" !
+    
+    dup  
+    #       "rotary_emb.inv_freq" @
+    0 #     "rotary_emb.inv_freq" !
+    
+    dup  
+    #       "o_proj.weight" @
+    0 #     "o_proj.weight" !
+    
+    dup
+    #       "gate_proj.weight" @
+    0 #     "gate_proj.weight" !
 
-    #       "post_attention_layernorm.bias" @
-    0 #     "post_attention_layernorm.bias" !
+    dup
+    #       "up_proj.weight" @
+    0 #     "up_proj.weight" !
+
+    #       "down_proj.weight" @
+    0 #     "down_proj.weight" !
 %end
 
 %def sync_layer_offload
     dup
- 
     0 #        "input_layernorm.weight" @  
     swap #     "input_layernorm.weight" @  op.copy
+    
     dup
-  
-    0 #        "input_layernorm.bias" @
-    swap #     "input_layernorm.bias" @    op.copy 
-    dup
-
     0 #        "query_key_value.weight" @
-    swap #     "query_key_value.weight" @  op.copy
+    swap #     "query_key_value.weight" @  op.copy 
+    
     dup
-
-    0 #        "query_key_value.bias" @
-    swap #     "query_key_value.bias" @    op.copy
-    dup
-
-    0 #        "dense.weight" @
-    swap #     "dense.weight" @            op.copy
-    dup  
-
-    0 #        "dense.bias" @
-    swap #     "dense.bias" @              op.copy
-    dup
-
-    0 #        "dense_h_to_4h.weight" @
-    swap #     "dense_h_to_4h.weight" @    op.copy
-    dup  
-
-    0 #        "dense_h_to_4h.bias" @
-    swap #     "dense_h_to_4h.bias" @      op.copy
-    dup
-
-    0 #        "dense_4h_to_h.weight" @
-    swap #     "dense_4h_to_h.weight" @    op.copy
-    dup    
-
-    0 #        "dense_4h_to_h.bias" @
-    swap #     "dense_4h_to_h.bias" @      op.copy
-    dup
-  
     0 #        "post_attention_layernorm.weight" @
     swap #     "post_attention_layernorm.weight" @  op.copy
-
-    0 #        "post_attention_layernorm.bias" @
-    swap #     "post_attention_layernorm.bias" @    op.copy
+    
+    dup
+    0 #        "rotary_emb.inv_freq" @
+    swap #     "rotary_emb.inv_freq" @ op.copy
+    
+    dup
+    0 #        "o_proj.weight" @
+    swap #     "o_proj.weight" @ op.copy
+    
+    dup  
+    0 #        "gate_proj.weight" @
+    swap #     "gate_proj.weight" @ op.copy
+    
+    dup
+    0 #        "up_proj.weight" @
+    swap #     "up_proj.weight" @ op.copy
+    
+    0 #        "dense_h_to_4h.bias" @
+    swap #     "dense_h_to_4h.bias" @ op.copy
 
     0 #
 %end
@@ -292,33 +245,11 @@
         $batch @ $tokens @ "HIDDEN_SIZE" @ * * +
     }
 
-    ;; alibi in GPU
-    {
-        dup
-        "_var_" @ swap 1 "HEADS_NUM" @ 1 $tokens @ 4 op.view "alibi" !
-        "HEADS_NUM" @ $tokens @ * +
-    }
-
     ;; causal mask in GPU
     {
         dup
         "_var_" @ swap $batch @ 1 $tokens @  $tokens @  4 op.view   "causal_mask"  !
         $batch @ $tokens @ $tokens @ * * +
-    }
-
-    ;;  keep var in layer_norm, used for backward
-    {
-        dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "input_ln_var" !
-        "HIDDEN_SIZE" @  +
-
-        dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "post_ln_var" !
-        "HIDDEN_SIZE" @  +
-
-        dup
-        "_var_" @ swap "HIDDEN_SIZE" @ 1 op.view  "ln_mean" !
-        "HIDDEN_SIZE" @  +
     }
 
     ;; xa, xb, xc
@@ -392,58 +323,6 @@
 %end
 
 %def layer_forward
-    ;; layernorm for input
-    "xinput" @ "ln_mean" @ "input_ln_var" @ "input_layernorm.weight" @ "input_layernorm.bias" @ "xattn_in" @  "LN_EPS" @  op.layernorm
 
-    ;; get kqv & transpose
-    {
-        "xattn_in" @ "query.weight" @ "query.bias" @ "xa" @ op.linear
-        "xattn_in" @ "key.weight" @ "key.bias" @ "xb" @ op.linear
-        "xattn_in" @ "value.weight" @ "value.bias" @ "xc" @ op.linear
-
-        "ya" @ "zquery" @ op.transpos_0213
-        "yb" @ "zkey" @ op.transpos_0213
-        "yc" @ "zvalue" @ op.transpos_0213
-    }
-
-    ;; attention
-    {
-        ;; get query@key
-        "zquery" @  "zkey" @  "xll" @ op.querykey
-
-        ;; added alibi and apply causal_mask
-        "xll" @ "alibi" @ "xll" @ op.add
-        "xll" @ "causal_mask" @ "xll" @ op.add
-
-        ;; do softmax
-        "xll" @ "xll" @ op.softmax
-
-        ;; do attention and transpose back
-        "xll" @ "zvalue" @  "zc" @ op.attn          ;; attn -> zc
-        "zc" @ "yattn_out" @ op.transpos_0213
-    }
-
-    ;; do dense & residual
-    "xattn_out" @ "dense.weight" @ "dense.bias" @  "xb" @ op.linear
-    "xb" @ "xinput" @ "xa" @ op.add
-
-    ;; post layernorm
-    "xa" @ "ln_mean" @ "post_ln_var" @ "post_attention_layernorm.weight" @ "post_attention_layernorm.bias" @ "xb" @  "LN_EPS" @  op.layernorm
-
-    ;; MLP
-    {
-        ;; xa atteion output
-        ;; xb passed post layernorm
-        ;; 4h dense & glue
-
-        "xb" @ "dense_h_to_4h.weight" @ "dense_h_to_4h.bias" @ "x4a" @ op.linear
-        "x4a" @ "x4b" @ op.gelu
-
-        ;; 4h dense
-        "x4b" @ "dense_4h_to_h.weight" @ "dense_4h_to_h.bias" @ "xc" @ op.linear
-
-        ;; residual
-        "xa" @ "xc" @ "xa" @ op.add
-    }
 %end
 
