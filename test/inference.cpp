@@ -9,7 +9,7 @@ const size_t MEM_CTX_SIZE = 12 * 1024 * 1024 * 1024l;
 
 struct ChatApplication {
     ChatApplication() {
-        tokenizer_ = br::build_tokenizer("../models/bloomz/tokenizer.json");
+        tokenizer_ = br::build_tokenizer("../models/baichuan-7B/tokenizer.model");
     }
     ~ChatApplication() {
         delete tokenizer_;
@@ -69,8 +69,8 @@ private:
 
 void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cmd) {
     {
-        std::string all_code = br::fileToString("../models/bloomz/common.words");
-        all_code = all_code + br::fileToString("../models/bloomz/inference.words");
+        std::string all_code = br::fileToString("../models/baichuan-7B/common.words");
+        all_code = all_code + br::fileToString("../models/baichuan-7B/inference.words");
 
         br::DaG* init_bin = env->build(all_code);
         for(size_t i = 0; i < env->hashes_num(); i++) {
@@ -100,6 +100,7 @@ void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cm
 }
 
 int main(int argc, char* argv[] ) {
+    std::cout << " ######################## " << __FILE__ << " " << __LINE__ << std::endl;
     br::CollectiveContext::boot(argc, argv, 2);
 
     if ( br::CollectiveContext::mpi_rank == 0) {

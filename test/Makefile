@@ -23,11 +23,11 @@ tokenizer: tokenizer.cpp
 train: train.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-bloomz: bloomz.cpp
+inference: inference.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-run: bloomz
-	mpirun -n 3 -stdin 0 bloomz
+inf: inference
+	mpirun -n 3 -stdin 0 ./inference
 
 clean:
-	rm -f repl tokenizer train bloomz
+	rm -f repl tokenizer train inference
