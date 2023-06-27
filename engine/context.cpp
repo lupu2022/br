@@ -1,5 +1,6 @@
 #include <cblas.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "common.hpp"
 #include "context.hpp"
@@ -56,11 +57,32 @@ ncclComm_t      CollectiveContext::nccl_comm = nullptr;
 int             CollectiveContext::nccl_rank = -1;
 int             CollectiveContext::nccl_world = -1;
 
-void CollectiveContext::boot() {
+void CollectiveContext::boot_fork(int gpus) {
+    mpi_rank = 0;
+    ncclGetUniqueId(&nccl_id);
+
+    for (int i = 0; i < gpus; i++) {
+        int n = fork();
+        if ( n == 0 ) {
+            mpi_rank = i + 1;
+            break;
+        }
+    }
+
+    if ( mpi_rank >= 1 ) {
+        nccl_world = gpus;
+        nccl_rank = mpi_rank - 1;
+
+        CUDA_CHECK( cudaSetDevice(nccl_rank) );
+        NCCL_CHECK( ncclCommInitRank(&nccl_comm, nccl_world, nccl_id, nccl_rank) );
+    } else {
+        nccl_comm = nullptr;
+    }
+
     current = time(nullptr);
 }
 
-void CollectiveContext::boot(int argc, char* argv[], int gpus) {
+void CollectiveContext::boot_mpi(int argc, char* argv[], int gpus) {
     current = time(nullptr);
 
     MPI_Init(&argc, &argv);
@@ -90,7 +112,7 @@ void CollectiveContext::shutdown() {
     if( nccl_comm != nullptr ) {
         NCCL_CHECK(ncclCommDestroy(nccl_comm));
     }
-    if ( mpi_rank != -1 ) {
+    if ( mpi_world != -1 ) {
         MPI_Finalize();
     }
 }

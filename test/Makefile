@@ -26,8 +26,5 @@ train: train.cpp
 inference: inference.cpp
 	g++ $(FLAGS) -o $@ $< $(INC) $(LINK)
 
-inf: inference
-	mpirun -n 3 -stdin 0 ./inference
-
 clean:
 	rm -f repl tokenizer train inference

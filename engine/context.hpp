@@ -31,8 +31,8 @@ struct CollectiveContext {
     static int             nccl_rank;
     static int             nccl_world;
 
-    static void boot();
-    static void boot(int argc, char* argv[], int gpus);
+    static void boot_fork(int gpus);
+    static void boot_mpi(int argc, char* argv[], int gpus);
     static void shutdown();
     static int now();
 };

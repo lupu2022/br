@@ -15,10 +15,6 @@ struct ChatApplication {
         delete tokenizer_;
     }
     void run() {
-        int dummy;
-        MPI_Recv(&dummy, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&dummy, 1, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
         std::string text;
         while( readline(">> ", text) ) {
             if ( text.size() > 0 ) {
@@ -39,6 +35,7 @@ struct ChatApplication {
                     masks.push_back(0);
                 }
 
+                /*
                 len = (int)ids.size();
                 MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
@@ -48,11 +45,12 @@ struct ChatApplication {
                 MPI_Recv(ids.data(), len, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                 std::cout << "===> " << tokenizer_->decode( ids) << std::endl;
+                */
             }
         }
 
-        int n = -1;
-        MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        //int n = -1;
+        //MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     bool readline(const std::string& prop, std::string& code) {
@@ -100,8 +98,7 @@ void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cm
 }
 
 int main(int argc, char* argv[] ) {
-    std::cout << " ######################## " << __FILE__ << " " << __LINE__ << std::endl;
-    br::CollectiveContext::boot(argc, argv, 2);
+    br::CollectiveContext::boot_fork(2);
 
     if ( br::CollectiveContext::mpi_rank == 0) {
         ChatApplication* app = new ChatApplication();
@@ -112,23 +109,28 @@ int main(int argc, char* argv[] ) {
     } else if ( br::CollectiveContext::mpi_rank == 1) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+
+        /*
         br::Enviroment* env = new br::Enviroment(16);
         br::load_nn_words(*env);
 
         do_inference(env, "init_gpu_0", "main_gpu_0");
-
         delete env;
+        */
+
         br::ComputingContext::shutdown();
         br::MemoryContext::shutdown();
     } else if ( br::CollectiveContext::mpi_rank == 2) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
+        /*
         br::Enviroment* env = new br::Enviroment(16);
         br::load_nn_words(*env);
 
         do_inference(env, "init_gpu_1", "main_gpu_1");
 
         delete env;
+        */
         br::ComputingContext::shutdown();
         br::MemoryContext::shutdown();
     }
