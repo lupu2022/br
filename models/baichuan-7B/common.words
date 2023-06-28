@@ -5,7 +5,7 @@
 128                     "HEAD_HIDDEN"           !
 4096                    "MAX_POSITION_EMB"      !
 
-1e-05                   "LN_EPS"                !
+1e-06                   "LN_EPS"                !
 0.5                     "TEMPERATURE"           !
 0.90                    "TOP_P"                 !
 

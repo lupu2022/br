@@ -86,6 +86,9 @@ struct TransformerComputing {
     virtual ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
         return OP_TODO_ERROR;
     }
+    virtual ComputingReturn op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) {
+        return OP_TODO_ERROR;
+    }
     virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y) {
         return OP_TODO_ERROR;
     }
@@ -111,6 +114,9 @@ struct TransformerComputing {
         return OP_TODO_ERROR;
     }
     virtual ComputingReturn op_layernorm_backward(tensor_t self, tensor_t scale, tensor_t bias, tensor_t var, tensor_t y, tensor_t dscale, tensor_t dbias, tensor_t din, float eps) {
+        return OP_TODO_ERROR;
+    }
+    virtual ComputingReturn op_rmsnorm_backward(tensor_t self, tensor_t x, tensor_t scale, tensor_t norm2, tensor_t dscale, tensor_t dx, float eps) {
         return OP_TODO_ERROR;
     }
     virtual ComputingReturn op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) {

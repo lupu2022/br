@@ -73,6 +73,7 @@ struct CUDATensor : public TransformerComputing {
 
     ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
     ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) override;
+    ComputingReturn op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) override;
 
     ComputingReturn op_transpos_0213(tensor_t self, tensor_t y) override;
     ComputingReturn op_qk(tensor_t self, tensor_t k, tensor_t qk) override;

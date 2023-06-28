@@ -111,6 +111,12 @@ ComputingReturn TensorType::op_layernorm(tensor_t self, tensor_t mean, tensor_t 
     op_check(ret, "layernorm");
 }
 
+ComputingReturn TensorType::op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_rmsnorm(self, scale, norm2, y, eps);
+    op_check(ret, "rmsnorm");
+}
+
 ComputingReturn TensorType::op_transpos_0213(tensor_t self, tensor_t y) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_transpos_0213(self, y);
@@ -169,6 +175,12 @@ ComputingReturn TensorType::op_layernorm_backward(tensor_t self, tensor_t scale,
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_layernorm_backward(self, scale, bias, var, y, dscale, dbias, din, eps);
     op_check(ret, "layernorm_backward");
+}
+
+ComputingReturn TensorType::op_rmsnorm_backward(tensor_t self, tensor_t x, tensor_t scale, tensor_t norm2, tensor_t dscale, tensor_t dx, float eps) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_rmsnorm_backward(self, x, scale, norm2, dscale, dx, eps);
+    op_check(ret, "rmsnorm_backward");
 }
 
 ComputingReturn TensorType::op_linear_backward(tensor_t self, tensor_t x, tensor_t weight, tensor_t bias, tensor_t x_g, tensor_t weight_g, tensor_t bias_g ) {
