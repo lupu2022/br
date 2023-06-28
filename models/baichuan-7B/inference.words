@@ -2,7 +2,7 @@
     0 # 
     { 
         8 1024 *
-        1024 1024 1024 * * 1.5 * 
+        1024 1024 1024 * * 1.5 *
         "float" 
         create_variable  
     } 
@@ -24,6 +24,7 @@
     14 # "cpu" "float" create_layer_weight
     15 # "cpu" "float" create_layer_weight
     16 # "cpu" "float" create_layer_weight
+
 %end
 
 %def init_gpu_0
@@ -33,22 +34,22 @@
     0 # "./weights/" load_input_weight
     
     0 # "./weights/" $PATH !
-    0 # $PATH @ "h0"  | 1 # load_layer_weight
-    0 # $PATH @ "h2"  | 2 # load_layer_weight
-    0 # $PATH @ "h4"  | 3 # load_layer_weight
-    0 # $PATH @ "h6"  | 4 # load_layer_weight
-    0 # $PATH @ "h8"  | 5 # load_layer_weight
-    0 # $PATH @ "h10" | 6 # load_layer_weight
-    0 # $PATH @ "h12"  | 7 # load_layer_weight
-    0 # $PATH @ "h14"  | 8 # load_layer_weight
-    0 # $PATH @ "h16"  | 9 # load_layer_weight
-    0 # $PATH @ "h18"  | 10 # load_layer_weight
-    0 # $PATH @ "h20"  | 11 # load_layer_weight
-    0 # $PATH @ "h22"  | 12 # load_layer_weight
-    0 # $PATH @ "h24"  | 13 # load_layer_weight
-    0 # $PATH @ "h26"  | 14 # load_layer_weight
-    0 # $PATH @ "h28"  | 15 # load_layer_weight
-    0 # $PATH @ "h30"  | 16 # load_layer_weight
+    0 # $PATH @ "h_0"  | 1 # load_layer_weight
+    0 # $PATH @ "h_2"  | 2 # load_layer_weight
+    0 # $PATH @ "h_4"  | 3 # load_layer_weight
+    0 # $PATH @ "h_6"  | 4 # load_layer_weight
+    0 # $PATH @ "h_8"  | 5 # load_layer_weight
+    0 # $PATH @ "h_10" | 6 # load_layer_weight
+    0 # $PATH @ "h_12"  | 7 # load_layer_weight
+    0 # $PATH @ "h_14"  | 8 # load_layer_weight
+    0 # $PATH @ "h_16"  | 9 # load_layer_weight
+    0 # $PATH @ "h_18"  | 10 # load_layer_weight
+    0 # $PATH @ "h_20"  | 11 # load_layer_weight
+    0 # $PATH @ "h_22"  | 12 # load_layer_weight
+    0 # $PATH @ "h_24"  | 13 # load_layer_weight
+    0 # $PATH @ "h_26"  | 14 # load_layer_weight
+    0 # $PATH @ "h_28"  | 15 # load_layer_weight
+    0 # $PATH @ "h_30"  | 16 # load_layer_weight
 
     0 # $PATH !!
 %end
@@ -60,54 +61,43 @@
     0 # "./weights/" load_output_weight
 
     0 # "./weights/" $PATH !
-    0 # $PATH @ "h1"  | 1 # load_layer_weight
-    0 # $PATH @ "h3"  | 2 # load_layer_weight
-    0 # $PATH @ "h5"  | 3 # load_layer_weight
-    0 # $PATH @ "h7"  | 4 # load_layer_weight
-    0 # $PATH @ "h9"  | 5 # load_layer_weight
-    0 # $PATH @ "h11" | 6 # load_layer_weight
-    0 # $PATH @ "h13"  | 7 # load_layer_weight
-    0 # $PATH @ "h15"  | 8 # load_layer_weight
-    0 # $PATH @ "h17"  | 9 # load_layer_weight
-    0 # $PATH @ "h19"  | 10 # load_layer_weight
-    0 # $PATH @ "h21"  | 11 # load_layer_weight
-    0 # $PATH @ "h23"  | 12 # load_layer_weight
-    0 # $PATH @ "h25"  | 13 # load_layer_weight
-    0 # $PATH @ "h27"  | 14 # load_layer_weight
-    0 # $PATH @ "h29"  | 15 # load_layer_weight
-    0 # $PATH @ "h31"  | 16 # load_layer_weight
+    0 # $PATH @ "h_1"  | 1 # load_layer_weight
+    0 # $PATH @ "h_3"  | 2 # load_layer_weight
+    0 # $PATH @ "h_5"  | 3 # load_layer_weight
+    0 # $PATH @ "h_7"  | 4 # load_layer_weight
+    0 # $PATH @ "h_9"  | 5 # load_layer_weight
+    0 # $PATH @ "h_11" | 6 # load_layer_weight
+    0 # $PATH @ "h_13"  | 7 # load_layer_weight
+    0 # $PATH @ "h_15"  | 8 # load_layer_weight
+    0 # $PATH @ "h_17"  | 9 # load_layer_weight
+    0 # $PATH @ "h_19"  | 10 # load_layer_weight
+    0 # $PATH @ "h_21"  | 11 # load_layer_weight
+    0 # $PATH @ "h_23"  | 12 # load_layer_weight
+    0 # $PATH @ "h_25"  | 13 # load_layer_weight
+    0 # $PATH @ "h_27"  | 14 # load_layer_weight
+    0 # $PATH @ "h_29"  | 15 # load_layer_weight
+    0 # $PATH @ "h_31"  | 16 # load_layer_weight
     0 # $PATH !!
 %end
 
-%def main_gpu_0
+%def prepare_input
     0 #
     1 swap create_dynamic
 
-    "ids_" @  0 io.mpi.bcast
-    "mask_" @ 0 io.mpi.bcast
+    "ids_" @  io.pipe.read
+    "mask_" @ io.pipe.read
 
     "ids"  @    "ids_" @ op.copy
     "mask" @    "mask_" @ op.copy
 
     "mask" @ "causal_mask" @ op.causal_mask 
-   
-    ;; embed & ln    
-    {
-        "ids" @ "word_embeddings.weight" @ "xa" @ op.embed
-        "xa" @ "ln_mean" @ "input_ln_var" @  "word_embeddings_layernorm.weight" @ "word_embeddings_layernorm.bias" @ "xinput" @ "LN_EPS" @ op.layernorm 
-    }
+%end
 
+%def main_gpu_0
+    prepare_input
+    ?
 %end
 
 %def main_gpu_1
-    0 #
-    1 swap create_dynamic
-
-    "ids_" @  0 io.mpi.bcast
-    "mask_" @ 0 io.mpi.bcast
-
-    "ids"  @    "ids_" @ op.copy
-    "mask" @    "mask_" @ op.copy
-
-    "mask" @ "causal_mask" @ op.causal_mask 
+    prepare_input
 %end

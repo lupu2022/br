@@ -38,11 +38,6 @@ struct BloomzTokenizer : public Tokenizer {
         rustObj = nullptr;
     }
 
-
-    virtual int token_pad() override {
-        return 3;
-    }
-
     virtual int token_unk() override {
         return 0;
     }
@@ -92,10 +87,6 @@ struct BaichuanTokenizer : public Tokenizer {
         }
     }
     ~BaichuanTokenizer() {
-    }
-
-    virtual int token_pad() override {
-        return 0;
     }
 
     virtual int token_unk() override {

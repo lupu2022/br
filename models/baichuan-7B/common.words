@@ -3,7 +3,7 @@
 11008                   "INTERMEDIATE_SIZE"     !
 32                      "HEADS_NUM"             !
 128                     "HEAD_HIDDEN"           !
-4096                     "MAX_POSITION_EMB"      !
+4096                    "MAX_POSITION_EMB"      !
 
 1e-05                   "LN_EPS"                !
 0.5                     "TEMPERATURE"           !
@@ -112,7 +112,7 @@
     
     {
         "post_attention_layernorm.weight" @
-        $weights_path @  ".post_attention_layernorm.weight.weight.bin" | 
+        $weights_path @  ".post_attention_layernorm.weight.bin" | 
         io.load
     }
 
@@ -130,7 +130,7 @@
 
     {
         "o_proj.weight" @
-        $weights_path @  ".self_attn.o_proj.weight..bin" | 
+        $weights_path @  ".self_attn.o_proj.weight.bin" | 
         io.load
     }
 

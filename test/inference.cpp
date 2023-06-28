@@ -6,7 +6,7 @@
 
 #include <br_engine.hpp>
 
-const size_t MEM_CTX_SIZE = 12 * 1024 * 1024 * 1024l;
+const size_t MEM_CTX_SIZE = 14 * 1024 * 1024 * 1024l;
 
 struct ChatApplication {
     ChatApplication() {
@@ -21,7 +21,19 @@ struct ChatApplication {
         br_assert( br::CollectiveContext::pipe_write(2, buf, nbyte) > 0, "write_all error");
     }
 
+    void wait_all_ready() {
+        int dummy = -1;
+        br::CollectiveContext::pipe_read(&dummy, sizeof(int));
+        br_assert(dummy == 1, "wait_all_ready error");
+
+        dummy = -1;
+        br::CollectiveContext::pipe_read(&dummy, sizeof(int));
+        br_assert(dummy == 1, "wait_all_ready error");
+    }
+
     void run() {
+        wait_all_ready();
+
         std::string text;
         while( readline(">> ", text) ) {
             if ( text.size() > 0 ) {
@@ -38,18 +50,16 @@ struct ChatApplication {
                 len = len - (int)ids.size();
 
                 for (int i = 0; i < len; i++) {
-                    ids.push_back( tokenizer_->token_pad() );
+                    ids.push_back( tokenizer_->token_unk() );
                     masks.push_back(0);
                 }
 
                 len = (int)ids.size();
                 write_all(&len, sizeof(int));
+                write_all(ids.data(), len * sizeof(int));
+                write_all(masks.data(), len * sizeof(int));
 
                 /*
-                MPI_Bcast(ids.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
-                MPI_Bcast(masks.data(), len, MPI_INT, 0, MPI_COMM_WORLD);
-
-
                 MPI_Recv(ids.data(), len, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                 std::cout << "===> " << tokenizer_->decode( ids) << std::endl;
@@ -74,7 +84,6 @@ private:
 };
 
 void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cmd) {
-    /*
     {
         std::string all_code = br::fileToString("../models/baichuan-7B/common.words");
         all_code = all_code + br::fileToString("../models/baichuan-7B/inference.words");
@@ -86,25 +95,24 @@ void do_inference(br::Enviroment* env, const char* init_cmd, const char* main_cm
         }
         delete init_bin;
     }
-
     env->execute(init_cmd);
 
     int ok = 1;
-    MPI_Send(&ok, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    br_assert( br::CollectiveContext::pipe_write(0, &ok, sizeof(int)) > 0, "pipe_write error");
 
     br::DaG* target_cmd = env->build(main_cmd);
-    */
 
     for (;;) {
         int ids = -1;
         br::CollectiveContext::pipe_read(&ids, sizeof(int));;
-        std::cout << ids << std::endl;
         if ( ids <= 0 ) {
             break;
         }
+        env->stack().push_number(ids);
+        env->run(target_cmd);
     }
 
-    //delete target_cmd;
+    delete target_cmd;
 }
 
 int main(int argc, char* argv[] ) {
@@ -124,7 +132,7 @@ int main(int argc, char* argv[] ) {
     } else if ( br::CollectiveContext::pipe_rank == 1) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-        br::Enviroment* env = new br::Enviroment(16);
+        br::Enviroment* env = new br::Enviroment(17);
 
         br::load_nn_words(*env);
         do_inference(env, "init_gpu_0", "main_gpu_0");
@@ -135,7 +143,7 @@ int main(int argc, char* argv[] ) {
     } else if ( br::CollectiveContext::pipe_rank == 2) {
         br::MemoryContext::boot( MEM_CTX_SIZE );
         br::ComputingContext::boot( br::CollectiveContext::nccl_rank );
-        br::Enviroment* env = new br::Enviroment(16);
+        br::Enviroment* env = new br::Enviroment(17);
 
         br::load_nn_words(*env);
         do_inference(env, "init_gpu_1", "main_gpu_1");

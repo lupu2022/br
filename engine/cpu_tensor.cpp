@@ -171,7 +171,7 @@ ComputingReturn CPUTensor<_DTYPE_>::io_save(tensor_t self, const char* fileName)
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName) {
     if ( _DTYPE_ == DataType::Float ) {
-        const size_t count = 1024;
+        const size_t count = 64;
         std::ifstream inf(fileName, std::ios::binary);
         if ( ! inf.is_open() ) {
             std::cout << "Can't open " << fileName << std::endl;
