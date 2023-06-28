@@ -95,7 +95,12 @@
 
 %def main_gpu_0
     prepare_input
-    ?
+    
+    ;; embed & ln    
+    {
+        "ids" @ "embed_tokens.weight" @ "xa" @ op.embed
+    }
+    "xa" @ io.dump
 %end
 
 %def main_gpu_1

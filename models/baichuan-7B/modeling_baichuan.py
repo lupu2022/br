@@ -748,3 +748,17 @@ def load_baichuan():
         model.model.layers[i].load_state_dict( torch.load(path + hname) );
 
     return config, model
+
+def verify_model():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained("baichuan-inc/baichuan-7B", trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.unk_token
+    config, model = load_baichuan();
+
+    inputs = tokenizer('hello world in sky.', return_tensors='pt', max_length=8, padding='max_length');
+    inputs = model.prepare_inputs_for_generation(**inputs);
+    outputs = model(**inputs);
+
+    return model, inputs, outputs
+
