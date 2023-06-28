@@ -70,6 +70,7 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     ComputingReturn op_scale(tensor_t self, float scale) override;
     ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;
+    ComputingReturn op_mul(tensor_t self, tensor_t b, tensor_t c) override;
 
     ComputingReturn op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) override;
     ComputingReturn op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) override;

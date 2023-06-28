@@ -52,13 +52,8 @@ struct ChatApplication {
                     ids.push_back( tokenizer_->token_unk() );
                     masks.push_back(0);
                 }
+
                 len = (int)ids.size();
-
-                for (int i = 0; i < len; i++) {
-                    std::cout << ids[i] << " ";
-                }
-                std::cout << std::endl;
-
                 write_all(&len, sizeof(int));
                 write_all(ids.data(), len * sizeof(int));
                 write_all(masks.data(), len * sizeof(int));

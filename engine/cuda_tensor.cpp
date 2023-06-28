@@ -13,7 +13,7 @@ namespace br {
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
-    size_t first8 = std::min(self->shape().vec().back(), (size_t)8);
+    size_t first8 = std::min(self->items(), (size_t)8);
 
     if ( DT == DataType::Float ) {
         auto stream = ComputingContext::cuda_stream;
@@ -427,6 +427,33 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
     return OP_TODO_ERROR;
 }
 
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_mul(tensor_t self, tensor_t b, tensor_t c) {
+    if ( DT == DataType::Float ) {
+        auto adesc = create_cudnn_td_with( self->shape().vec() );
+        auto bdesc = b->cuda_float()->create_cudnn_td_with( b->shape().vec() );
+        auto cdesc = c->cuda_float()->create_cudnn_td_with( c->shape().vec() );
+
+        float alpha = 1.0;
+        float beta = 0.0;
+
+        cudnnOpTensorDescriptor_t opTensorDesc;
+        CUDNN_CHECK( cudnnCreateOpTensorDescriptor(&opTensorDesc) );
+        CUDNN_CHECK( cudnnSetOpTensorDescriptor(opTensorDesc, CUDNN_OP_TENSOR_MUL, CUDNN_DATA_FLOAT, CUDNN_PROPAGATE_NAN) );
+
+        CUDNN_CHECK( cudnnOpTensor(ComputingContext::cudnn_handle,
+                                    opTensorDesc,
+                                    &alpha, adesc, data(),
+                                    &alpha, bdesc, b->cuda_float()->data(),
+                                    &beta,  cdesc, c->cuda_float()->data()) );
+
+        CUDNN_CHECK( cudnnDestroyOpTensorDescriptor(opTensorDesc) );
+
+        return OP_OK;
+    }
+
+    return OP_TODO_ERROR;
+}
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
@@ -453,7 +480,13 @@ ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tenso
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) {
+    size_t batch = self->shape()[0];
+    size_t tokens = self->shape()[1];
+    size_t hidden = self->shape()[2];
+
     if ( DT == DataType::Float ) {
+        norm2->op_fill(norm2, 1.0);
+
         // do norm2 reduce
         {
             cudnnReduceTensorDescriptor_t reduceDesc;
@@ -462,22 +495,23 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
             CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
                                                         CUDNN_REDUCE_TENSOR_NORM2, CUDNN_DATA_FLOAT,
                                                         CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_NO_INDICES, CUDNN_32BIT_INDICES) );
-            /*
-            float alpha = 1.0;
-            float beta = 0.0;
-            auto  adesc = create_cudnn_td_with({batch * tokens, outSize, 1, 1});
-            auto  cdesc = create_cudnn_td_with({1,              outSize, 1, 1});
+            float alpha = 1.0 / sqrt( (float)hidden );
+            float beta = eps;
+            auto  adesc = create_cudnn_td_with({batch * tokens, hidden, 1, 1});
+            auto  cdesc = create_cudnn_td_with({batch * tokens, 1,      1, 1});
             void* a = data();
-            void* c = bias_g->cuda_float()->data();
+            void* c = norm2->cuda_float()->data();
 
             CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
                                 reduceDesc,
                                 nullptr, 0,
                                 br::ComputingContext::cuda_workspace, br::ComputingContext::workspace_size,
                                 &alpha, adesc, a, &beta, cdesc, c) );
-            */
             CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
         }
+
+        // do scale
+        self->op_mul(self, norm2, self);
 
         return OP_OK;
     }

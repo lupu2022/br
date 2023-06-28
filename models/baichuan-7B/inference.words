@@ -100,6 +100,12 @@
     {
         "ids" @ "embed_tokens.weight" @ "xa" @ op.embed
     }
+    
+    1  sync_layer_offload
+
+    "xa" @ io.dump
+    "xa" @ "input_layernorm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
+    "norm2" @ io.dump
     "xa" @ io.dump
 %end
 
