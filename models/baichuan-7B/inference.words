@@ -106,7 +106,7 @@
     "xa" @ io.dump
     "xa" @ "input_layernorm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
     "norm2" @ io.dump
-    "xa" @ io.dump
+    "xb" @ io.dump
 %end
 
 %def main_gpu_1

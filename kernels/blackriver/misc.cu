@@ -6,7 +6,12 @@
 
 namespace br { namespace cuda {
 
-// just declare 
+// just declare
+template <typename T>
+int rsqrt(const T *in, T *out,
+            const int len, float eps,
+            cudaStream_t stream);
+
 template <typename T>
 int causal_mask(const int *mask, T *out,
                   const int batch,
@@ -63,7 +68,7 @@ int causal_mask<float>(const int *mask, float *out,
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
-        fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Failed to launch mask_float kernel (error code %s)!\n", cudaGetErrorString(err));
         exit(-1);
     }
    
@@ -106,11 +111,37 @@ int alibi<float>(float *out,
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
-        fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Failed to launch alibi_float kernel (error code %s)!\n", cudaGetErrorString(err));
         exit(-1);
     }
     return 0;
 }
+
+//----------------
+__global__ void rsqrt_float(const float *in, float *out, const int len, float eps) {
+    int e = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( e >= len ) {
+        return;
+    }
+    out[e] = sqrt(1.0 / (in[e]*in[e] + eps));
+}
+
+template<>
+int rsqrt<float>(const float *in, float *out, const int len, float eps, cudaStream_t stream) {
+    dim3 block_size(256);
+	dim3 num_of_blocks((len + block_size.x - 1) / block_size.x);
+   
+    rsqrt_float <<< num_of_blocks, block_size, 0, stream >>> (in, out, len, eps);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Failed to launch reverse_float kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+    return 0;
+}
+
+
 
 
 }}

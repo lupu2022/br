@@ -46,8 +46,8 @@
     $DTYPE !
     $DEVICE !
 
-    ("HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @)  op.create      "input_layernorm.weight"  !
-    ("HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @)  op.create  "post_attention_layernorm.weight"  !
+    (1 1 "HIDDEN_SIZE" @  3 $DEVICE @ $DTYPE @)  op.create      "input_layernorm.weight"  !
+    (1 1 "HIDDEN_SIZE" @  3 $DEVICE @ $DTYPE @)  op.create  "post_attention_layernorm.weight"  !
 
     ("HIDDEN_SIZE" @ 3 * "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create     "query_key_value.weight"  !
     ;

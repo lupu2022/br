@@ -485,8 +485,6 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
     size_t hidden = self->shape()[2];
 
     if ( DT == DataType::Float ) {
-        norm2->op_fill(norm2, 1.0);
-
         // do norm2 reduce
         {
             cudnnReduceTensorDescriptor_t reduceDesc;
@@ -496,7 +494,7 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
                                                         CUDNN_REDUCE_TENSOR_NORM2, CUDNN_DATA_FLOAT,
                                                         CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_NO_INDICES, CUDNN_32BIT_INDICES) );
             float alpha = 1.0 / sqrt( (float)hidden );
-            float beta = eps;
+            float beta = 0.0;
             auto  adesc = create_cudnn_td_with({batch * tokens, hidden, 1, 1});
             auto  cdesc = create_cudnn_td_with({batch * tokens, 1,      1, 1});
             void* a = data();
@@ -510,8 +508,16 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
             CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
         }
 
+        // do reverse sqrt
+        {
+            float* inout = (float *)norm2->cuda_float()->data();
+            auto stream = ComputingContext::cuda_stream;
+            cuda::rsqrt(inout, inout, norm2->items(), eps, stream);
+        }
+
         // do scale
-        self->op_mul(self, norm2, self);
+        self->op_mul(self, norm2, y);
+        y->op_mul(y, scale, y);
 
         return OP_OK;
     }
@@ -682,10 +688,10 @@ ComputingReturn  CUDATensor<DT>::op_attn(tensor_t self, tensor_t value_, tensor_
 template<DataType DT>
 ComputingReturn  CUDATensor<DT>::op_gelu(tensor_t self, tensor_t out) {
     if ( DT == DataType::Float ) {
-        auto stream = ComputingContext::cuda_stream;
         float* src = (float *)data();
         float* dst = (float *)out->cuda_float()->data();
 
+        auto stream = ComputingContext::cuda_stream;
         cuda::gelu_forward(src, dst, self->items(), stream);
         return OP_OK;
     }

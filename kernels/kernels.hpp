@@ -7,6 +7,12 @@
 namespace br { namespace cuda {
 
 template <typename T>
+int rsqrt(const T *in, T *out,
+            const int len,
+            float eps,
+            cudaStream_t stream);
+
+template <typename T>
 int embed_forward(const int *ids, const T *table, T *out,
                   const int len,
                   const int hidden_size,
