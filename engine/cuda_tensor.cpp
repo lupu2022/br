@@ -312,7 +312,6 @@ ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b
     if ( DT == DataType::Float ) {
         auto x = this;
         auto w = w_->cuda_float();
-        auto b = b_->cuda_float();
         auto y = y_->cuda_float();
 
         size_t batch = self->shape()[0];
@@ -327,7 +326,6 @@ ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b
         float* A = (float *)w->data();
         float* B = (float *)x->data();
         float* C = (float *)y->data();
-        void* bias = b->data();
 
         float alpha = 1.0;
         float beta = 0.0;
@@ -341,7 +339,10 @@ ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b
                 ComputingContext::cuda_workspace,
                 ComputingContext::workspace_size);
 
-        {
+        if ( b_ != nullptr ) {
+            auto b = b_->cuda_float();
+            void* bias = b->data();
+
             auto ydesc = y->create_cudnn_td_with({batch, 1, tokens, outSize});
             auto bdesc = b->create_cudnn_td_with({1, 1, 1, outSize});
 

@@ -46,6 +46,15 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Create)
     };
 
+    struct Null : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t ret = nullptr;
+            stack.push_tensor(ret);
+        }
+
+        NWORD_CREATOR_DEFINE_LR(Null);
+    };
+
     struct Zero : public NativeWord {
         void run(Stack& stack) override {
             tensor_t t = stack.pop_tensor();
@@ -469,6 +478,7 @@ void load_nn_words(Enviroment& env) {
 
     env.insert_native_word("op.sync", nn::Sync::creator );
     env.insert_native_word("op.create", nn::Create::creator );
+    env.insert_native_word("op.null", nn::Null::creator );
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.alibi", nn::Alibi::creator );

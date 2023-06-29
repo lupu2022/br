@@ -98,15 +98,12 @@
     
     ;; embed & ln    
     {
-        "ids" @ "embed_tokens.weight" @ "xa" @ op.embed
+        "ids" @ "embed_tokens.weight" @ "xinput" @ op.embed
     }
     
-    1  sync_layer_offload
+    1 sync_layer_offload                layer_forward 
 
-    "xa" @ io.dump
-    "xa" @ "input_layernorm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
-    "norm2" @ io.dump
-    "xb" @ io.dump
+
 %end
 
 %def main_gpu_1
