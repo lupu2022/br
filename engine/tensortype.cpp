@@ -24,6 +24,12 @@ ComputingReturn TensorType::op_alibi(tensor_t self) {
     op_check(ret, "alibi");
 }
 
+ComputingReturn TensorType::op_rotary_cache(tensor_t self, float base, int dims) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_rotary_cache(self, base, dims);
+    op_check(ret, "rotary_cache");
+}
+
 ComputingReturn TensorType::op_causal_mask(tensor_t self, tensor_t out) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(self->dtype() == DataType::Int, " mask must be int !");
