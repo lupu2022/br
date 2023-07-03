@@ -261,6 +261,37 @@ ComputingReturn CUDATensor<DT>::op_alibi(tensor_t self) {
 }
 
 template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_rotary_cache(tensor_t self, float base) {
+    // building inv_freq
+    int len = self->shape()[0];
+    int dims = self->shape()[1];
+
+    std::vector<float> inv_freq;
+    inv_freq.resize(dims);
+    for (int i = 0; i < dims ; i += 2) {
+        float f = 1.0 / pow(base,  1.0 * i / dims);
+        inv_freq[i / 2] = f;
+        inv_freq[dims / 2 + i / 2] = f;
+    }
+    std::vector<float> cos_sin;
+    for (int l = 0; l < len; l++ ) {
+        for (int i = 0; i < dims; i++) {
+            //freqs.push_back( 1.0 * i * inv_freq[i] );
+            float f = 1.0 * l * inv_freq[i];
+            cos_sin.push_back( cos(f) );
+            cos_sin.push_back( sin(f) );
+        }
+    }
+    if ( DT == DataType::Float ) {
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
+
+template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_causal_mask(tensor_t self, tensor_t out) {
     int batch = self->shape()[0];
     int tokens = self->shape()[1];

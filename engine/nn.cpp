@@ -80,6 +80,15 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Alibi)
     };
 
+    struct RotaryCache : public NativeWord {
+        void run(Stack& stack) override {
+            float base = stack.pop_number();
+            tensor_t t = stack.pop_tensor();
+            t->op_rotary_cache(t, base);
+        }
+        NWORD_CREATOR_DEFINE_LR(RotaryCache)
+    };
+
     struct CausalMask : public NativeWord {
         void run(Stack& stack) override {
             auto out = stack.pop_tensor();
@@ -482,6 +491,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.zero", nn::Zero::creator );
     env.insert_native_word("op.fill", nn::Fill::creator );
     env.insert_native_word("op.alibi", nn::Alibi::creator );
+    env.insert_native_word("op.rotary_cache", nn::RotaryCache::creator );
     env.insert_native_word("op.causal_mask", nn::CausalMask::creator );
     env.insert_native_word("op.scale", nn::Scale::creator );
     env.insert_native_word("op.view", nn::View::creator );

@@ -59,7 +59,7 @@ struct TransformerComputing {
     virtual ComputingReturn op_alibi(tensor_t self) {
         return OP_TODO_ERROR;
     }
-    virtual ComputingReturn op_rotary_cache(tensor_t self, float base, int dim) {
+    virtual ComputingReturn op_rotary_cache(tensor_t self, float base) {
         return OP_TODO_ERROR;
     }
     virtual ComputingReturn op_causal_mask(tensor_t self, tensor_t output) {

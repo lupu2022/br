@@ -20,8 +20,8 @@
     1 "cuda" "int" op.create "_ids" !
     1 "cuda" "int" op.create "_mask" !
 
-    1 "HEAD_HIDDEN" @ 2 3 "cuda" "float" op.create dup 
-    10000.0 "HEAD_HIDDEN" @ op_rotary_cache 
+    "MAX_POSITION_EMB" @  "HEAD_HIDDEN" @ 2 3 "cuda" "float" op.create dup 
+    10000.0 op.rotary_cache 
     "rotary_cache" !
 %end
 
@@ -343,10 +343,8 @@
         "yb" @ "zkey" @ op.transpos_0213
         "yc" @ "zvalue" @ op.transpos_0213
     }
-    
-     
 
-
+    "rotary_cache" @ io.dump
 
 %end
 

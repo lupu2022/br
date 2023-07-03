@@ -103,7 +103,6 @@
     
     1 sync_layer_offload                layer_forward 
 
-
 %end
 
 %def main_gpu_1
