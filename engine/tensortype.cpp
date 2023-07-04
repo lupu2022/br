@@ -156,7 +156,13 @@ ComputingReturn TensorType::op_attn(tensor_t self, tensor_t v, tensor_t attn) {
 ComputingReturn TensorType::op_gelu(tensor_t self, tensor_t dst) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_gelu(self, dst);
-    op_check(ret, "attn");
+    op_check(ret, "gelu");
+}
+
+ComputingReturn TensorType::op_silu_product(tensor_t self, tensor_t up, tensor_t dst) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_silu_product(self, up, dst);
+    op_check(ret, "silu_product");
 }
 
 ComputingReturn TensorType::op_last_logits(tensor_t self, tensor_t mask, tensor_t lm_head, tensor_t output) {

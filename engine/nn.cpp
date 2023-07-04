@@ -250,6 +250,16 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Gelu)
     };
 
+    struct SiluProduct : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t out = stack.pop_tensor();
+            tensor_t in = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+            x->op_silu_product(x, in, out);
+        }
+        NWORD_CREATOR_DEFINE_LR(SiluProduct)
+    };
+
     struct LastLogits : public NativeWord {
         void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
@@ -519,6 +529,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.softmax", nn::Softmax::creator);
     env.insert_native_word("op.attn", nn::Attn::creator);
     env.insert_native_word("op.gelu", nn::Gelu::creator);
+    env.insert_native_word("op.silu_product", nn::SiluProduct::creator);
     env.insert_native_word("op.last_logits", nn::LastLogits::creator);
     env.insert_native_word("op.sampling_top_p", nn::SamplingTopP::creator);
     env.insert_native_word("op.loss_backward", nn::LossBackward::creator);

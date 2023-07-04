@@ -754,6 +754,21 @@ ComputingReturn  CUDATensor<DT>::op_gelu(tensor_t self, tensor_t out) {
 }
 
 template<DataType DT>
+ComputingReturn  CUDATensor<DT>::op_silu_product(tensor_t self, tensor_t in, tensor_t out) {
+    if ( DT == DataType::Float ) {
+        float* src = (float *)data();
+        float* in_ = (float *)in->cuda_float()->data();
+        float* dst = (float *)out->cuda_float()->data();
+
+        auto stream = ComputingContext::cuda_stream;
+        cuda::silu_product(src, in_, dst, self->items(), stream);
+        return OP_OK;
+    }
+
+    return OP_TODO_ERROR;
+}
+
+template<DataType DT>
 ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  tensor_t lm_head, tensor_t output) {
     if ( DT == DataType::Float ) {
         int batch = self->shape()[0];

@@ -8,6 +8,10 @@ namespace br { namespace cuda {
 
 // just declare
 template <typename T>
+int silu_product(const T *in_act, const T* in, T* out, const int items,
+            cudaStream_t stream);
+
+template <typename T>
 int rotary_embed(const T *in, const T *cos_sin, T* out,
             const int bs, const int len, const int dims,
             cudaStream_t stream);
@@ -160,18 +164,6 @@ __global__ void rotary_embed_float(const float *in, const float *cos_sin, float 
     cos_sin = cos_sin + pos * dims * 2;
     for (int i = 0; i < dims / 2; i++) {
         int ii = i + dims/2;
-        /*
-        if ( i < dims / 2 ) {
-            float x = in[i];
-            float y = -1.0 * in[ii];
-            out[i] = cos_sin[i*2] * x + cos_sin[i*2+1] * y;
-        } else {
-            float x = in[i];
-            float y = in[ii];
-            out[i] = cos_sin[i*2] * x + cos_sin[i*2+1] * y;
-        }
-        */
-        
         float x = in[i];
         float y = in[ii];
         out[i] = cos_sin[i*2] * x - cos_sin[i*2+1] * y;
@@ -195,6 +187,32 @@ int rotary_embed<float>( const float *in, const float *cos_sin, float *out,
     return 0;
 }
 
+//----------------
+__global__ void silu_product_float(const float *in_act, const float *in, float *out, const int items) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( i >= items ) {
+        return;
+    }
+    float act = in_act[i];
+    float in_ = in[i];
+    out[i] = act / (1.f + __expf(-act)) * in_;
+}
+
+template<>
+int silu_product<float>( const float *in_act, const float *in, float *out, 
+                         const int items, cudaStream_t stream) {
+    dim3 block_size(256);
+	dim3 num_of_blocks((items + block_size.x - 1) / block_size.x);
+   
+    silu_product_float <<< num_of_blocks, block_size, 0, stream >>> (in_act, in, out, items);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Failed to launch silu_product_float kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+    return 0;
+}
 
 
 }}

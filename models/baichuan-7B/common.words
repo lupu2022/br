@@ -310,12 +310,12 @@
         $batch @ $tokens @ "HIDDEN_SIZE" @  * * +
 
         dup
-        "_var_" @ swap $batch @ $tokens @ ("HIDDEN_SIZE" @ 4 *) 3 op.view "x4a" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        "_var_" @ swap $batch @ $tokens @ "INTERMEDIATE_SIZE" @ 3 op.view "x4a" !
+        $batch @ $tokens @ "INTERMEDIATE_SIZE" @ * * +
 
         dup
-        "_var_" @ swap $batch @ $tokens @ ("HIDDEN_SIZE" @ 4 *) 3 op.view "x4b" !
-        $batch @ $tokens @ "HIDDEN_SIZE" @ 4 * * * +
+        "_var_" @ swap $batch @ $tokens @ "INTERMEDIATE_SIZE" @ 3 op.view "x4b" !
+        $batch @ $tokens @ "INTERMEDIATE_SIZE" @ * * +
 
         "_var_" @ swap $batch @ "HEADS_NUM" @ $tokens @ $tokens @ 4 op.view "xll" !
     }
@@ -363,13 +363,27 @@
         "zc" @ "yattn_out" @ op.transpos_0213
     }
     
-    ;; linear proj
+    ;; do dense & residual
     "xattn_out" @ "o_proj.weight" @  op.null "xb" @ op.linear  
-    "xb" @ io.dump
+    "xb" @ "xinput" @ "xa" @ op.add
+   
+    ;; post layer norm
+    "xa" @ "post_attention_layernorm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
 
-    ;; mlp
+    ;; MLP
     {
-
+        ;; xa atteion output
+        ;; xb passed post layernorm
+        
+        "xb" @ "up_proj.weight" @ op.null "x4a" @ op.linear
+        "xb" @ "gate_proj.weight" @ op.null "x4b" @ op.linear
+        
+        "x4b" @ "x4a" @ "x4a" @ op.silu_product
+    
+        "x4a" @ "down_proj.weight" @ op.null "xc" @ op.linear
     }
+    
+    "xc" @ io.dump
+
 %end
 
