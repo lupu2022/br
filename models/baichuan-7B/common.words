@@ -344,11 +344,28 @@
         "yc" @ "zvalue" @ op.transpos_0213
     }
 
-    ;"rotary_cache" @ io.dump
-    ;"zquery" @ io.dump
+    ;; rotary position embeding
+    "zquery" @ "rotary_cache" @ "za" @ op.rotary_embed
+    "zkey" @ "rotary_cache" @ "zb" @ op.rotary_embed
     
-    "zquery" @ "rotary_cache" @ "zquery" @ op.rotary_embed
-    "zquery" @ io.dump
+    ;; attention
+    {
+        ;; get query@key
+        "za" @  "zb" @  "xll" @ op.querykey
+        
+        ;; apply causal_mask
+        "xll" @ "causal_mask" @ "xll" @ op.add
+        
+        ;; do softmax
+        "xll" @ "xll" @ op.softmax
+    
+        ;; do attention and transpose back
+        "xll" @ "zvalue" @  "zc" @ op.attn          ;; attn -> zc
+        "zc" @ "yattn_out" @ op.transpos_0213
+    }
+    
+    ;; linear proj
+
 
 %end
 
