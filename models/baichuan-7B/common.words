@@ -332,7 +332,7 @@
 
 %def layer_forward
     "xinput" @ "input_layernorm.weight" @ "norm2" @ "xattn_in" @ "RMS_EPS" @ op.rmsnorm
-    
+   
     ;; get kqv & transpose
     {
         "xattn_in" @ "query.weight" @  op.null "xa" @ op.linear
@@ -344,7 +344,11 @@
         "yc" @ "zvalue" @ op.transpos_0213
     }
 
-    "rotary_cache" @ io.dump
+    ;"rotary_cache" @ io.dump
+    ;"zquery" @ io.dump
+    
+    "zquery" @ "rotary_cache" @ "zquery" @ op.rotary_embed
+    "zquery" @ io.dump
 
 %end
 

@@ -110,7 +110,6 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
     size_t first8 = std::min(self->shape().vec().back(), (size_t)8);
     if ( _DTYPE_ == DataType::Float ) {
         float* d = (float *)data();
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << d[i] << " ";
@@ -127,7 +126,6 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
     }
     if ( _DTYPE_ == DataType::Int ) {
         int* d = (int *)data();
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << d[i] << " ";
@@ -144,7 +142,6 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
     }
     if ( _DTYPE_ == DataType::FP16 ) {
         local_fp16* d = (local_fp16 *)data();
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(d[i]) << " ";

@@ -23,8 +23,10 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
         local_first.resize(first8, 0);
         local_last.resize(first8, 0);
 
-        auto x = self->cuda_float();
-        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
+        int debug = 0;
+
+        float *x = (float *)self->cuda_float()->data();
+        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x + debug, local_first.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
 
         std::vector<size_t> pos = self->shape().vec();
         auto shape_ = self->shape().vec();
@@ -32,12 +34,11 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
             pos[i] = shape_[i] - 1;
         }
         pos.back() = shape_.back() - first8;
-        void* src = (float *)x->data() + self->items() - first8;
+        float* src = x + (self->items() - first8 - debug);
         CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
 
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << local_first[i] << " ";
@@ -72,7 +73,6 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
 
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(local_first[i]) << " ";
@@ -107,7 +107,6 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
 
-        std::cout << "--------------------------" << std::endl;
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << local_first[i] << " ";
@@ -282,6 +281,7 @@ ComputingReturn CUDATensor<DT>::op_rotary_cache(tensor_t self, float base) {
             cos_sin.push_back( sin(f) );
         }
     }
+
     if ( DT == DataType::Float ) {
         auto stream = ComputingContext::cuda_stream;
         CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
@@ -555,6 +555,28 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
     }
     return OP_TODO_ERROR;
 }
+
+template<DataType DT>
+ComputingReturn CUDATensor<DT>::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t y) {
+    size_t batch = self->shape()[0];
+    size_t heads = self->shape()[1];
+    size_t tokens = self->shape()[2];
+    size_t hidden = self->shape()[3];
+
+    if ( DT == DataType::Float ) {
+
+        float* in = (float *)data();
+        float* cos_sin = (float *)cached->cuda_float()->data();
+        float* out = (float *)y->cuda_float()->data();
+
+        auto stream = ComputingContext::cuda_stream;
+        cuda::rotary_embed<float>(in, cos_sin, out, batch * heads, tokens, hidden, stream);
+
+        return OP_OK;
+    }
+    return OP_TODO_ERROR;
+}
+
 
 template<DataType DT>
 ComputingReturn  CUDATensor<DT>::op_transpos_0213(tensor_t self, tensor_t y) {

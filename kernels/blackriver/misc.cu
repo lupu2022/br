@@ -8,6 +8,11 @@ namespace br { namespace cuda {
 
 // just declare
 template <typename T>
+int rotary_embed(const T *in, const T *cos_sin, T* out,
+            const int bs, const int len, const int dims,
+            cudaStream_t stream);
+
+template <typename T>
 int rsqrt(const T *in, T *out,
             const int len, float eps,
             cudaStream_t stream);
@@ -141,6 +146,54 @@ int rsqrt<float>(const float *in, float *out, const int len, float eps, cudaStre
     return 0;
 }
 
+//----------------
+__global__ void rotary_embed_float(const float *in, const float *cos_sin, float *out, const int bs, const int len, const int dims) {
+    int e = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( e >= len * bs ) {
+        return;
+    }
+    
+    int pos = (e % len);
+    in = in + e * dims;
+    out = out + e * dims;
+
+    cos_sin = cos_sin + pos * dims * 2;
+    for (int i = 0; i < dims / 2; i++) {
+        int ii = i + dims/2;
+        /*
+        if ( i < dims / 2 ) {
+            float x = in[i];
+            float y = -1.0 * in[ii];
+            out[i] = cos_sin[i*2] * x + cos_sin[i*2+1] * y;
+        } else {
+            float x = in[i];
+            float y = in[ii];
+            out[i] = cos_sin[i*2] * x + cos_sin[i*2+1] * y;
+        }
+        */
+        
+        float x = in[i];
+        float y = in[ii];
+        out[i] = cos_sin[i*2] * x - cos_sin[i*2+1] * y;
+        out[ii] = cos_sin[ii*2] * y + cos_sin[ii*2+1] * x;
+    }
+}
+
+template<>
+int rotary_embed<float>( const float *in, const float *cos_sin, float *out, 
+                         const int bs, const int len, const int dims, cudaStream_t stream) {
+    dim3 block_size(256);
+	dim3 num_of_blocks((len * bs + block_size.x - 1) / block_size.x);
+   
+    rotary_embed_float <<< num_of_blocks, block_size, 0, stream >>> (in, cos_sin, out, bs, len, dims);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Failed to launch  rotary_embed_float kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+    return 0;
+}
 
 
 

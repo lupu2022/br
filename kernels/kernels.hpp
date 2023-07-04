@@ -7,6 +7,11 @@
 namespace br { namespace cuda {
 
 template <typename T>
+int rotary_embed(const T *in, const T *cos_sin, T* out,
+            const int bs, const int len, const int dims,
+            cudaStream_t stream);
+
+template <typename T>
 int rsqrt(const T *in, T *out,
             const int len,
             float eps,

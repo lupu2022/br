@@ -170,6 +170,18 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(RMSnorm)
     };
 
+    struct RotaryEmbed : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t out = stack.pop_tensor();
+            tensor_t cached = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+
+            x->op_rotary_embed(x, cached, out);
+        }
+        NWORD_CREATOR_DEFINE_LR( RotaryEmbed );
+    };
+
+
     struct Transpos0213 : public NativeWord {
         void run(Stack& stack) override {
             tensor_t y = stack.pop_tensor();
@@ -500,6 +512,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.linear", nn::Linear::creator );
     env.insert_native_word("op.layernorm", nn::Layernorm::creator );
     env.insert_native_word("op.rmsnorm", nn::RMSnorm::creator );
+    env.insert_native_word("op.rotary_embed", nn::RotaryEmbed::creator );
     env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
     env.insert_native_word("op.add", nn::Add::creator);
     env.insert_native_word("op.querykey", nn::QueryKey::creator);

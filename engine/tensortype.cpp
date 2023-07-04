@@ -123,6 +123,12 @@ ComputingReturn TensorType::op_rmsnorm(tensor_t self, tensor_t scale, tensor_t n
     op_check(ret, "rmsnorm");
 }
 
+ComputingReturn TensorType::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t y) {
+    br_assert(self.get() == this, "can't be here!");
+    auto ret = impl()->op_rotary_embed(self, cached, y);
+    op_check(ret, "rotary_embed");
+}
+
 ComputingReturn TensorType::op_transpos_0213(tensor_t self, tensor_t y) {
     br_assert(self.get() == this, "can't be here!");
     auto ret = impl()->op_transpos_0213(self, y);
@@ -239,6 +245,8 @@ ComputingReturn TensorType::io_save(tensor_t self, const char* fileName) {
 
 ComputingReturn TensorType::io_dump(tensor_t self) {
     br_assert(self.get() == this, "can't be here!");
+    std::cout << "--------------" << std::endl;
+    std::cout << to_string() << std::endl;
     auto ret = impl()->io_dump(self);
     op_check(ret, "dump");
 }
