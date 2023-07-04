@@ -377,13 +377,14 @@
         
         "xb" @ "up_proj.weight" @ op.null "x4a" @ op.linear
         "xb" @ "gate_proj.weight" @ op.null "x4b" @ op.linear
-        
         "x4b" @ "x4a" @ "x4a" @ op.silu_product
     
         "x4a" @ "down_proj.weight" @ op.null "xc" @ op.linear
-    }
     
-    "xc" @ io.dump
+        ;; residual
+        "xa" @ "xc" @ "xa" @ op.add
+    }
+
 
 %end
 
