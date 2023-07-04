@@ -1,9 +1,9 @@
 %def init_var_weight
     0 # 
     { 
-        8 1024 *
-        1024 1024 1024 * * 1.5 *
-        "float" 
+        8192                            ; max tokens
+        1024 1024 1024 * * 1.5 *        ; max working memory
+        "float"                         ; working data type
         create_variable  
     } 
     0 # "cuda" "float" create_layer_weight
@@ -100,7 +100,7 @@
     {
         "ids" @ "embed_tokens.weight" @ "xinput" @ op.embed
     }
-    
+
     1 sync_layer_offload                layer_forward 
 
 %end

@@ -3,7 +3,6 @@
 11008                   "INTERMEDIATE_SIZE"     !
 32                      "HEADS_NUM"             !
 128                     "HEAD_HIDDEN"           !
-4096                    "MAX_POSITION_EMB"      !
 
 1e-06                   "RMS_EPS"               !
 0.5                     "TEMPERATURE"           !
@@ -20,7 +19,7 @@
     1 "cuda" "int" op.create "_ids" !
     1 "cuda" "int" op.create "_mask" !
 
-    "MAX_POSITION_EMB" @  "HEAD_HIDDEN" @ 2 3 "cuda" "float" op.create dup 
+    "HEAD_HIDDEN" @ 2 3 "cuda" "float" op.create dup 
     10000.0 op.rotary_cache 
     "rotary_cache" !
 %end
@@ -365,7 +364,12 @@
     }
     
     ;; linear proj
+    "xattn_out" @ "o_proj.weight" @  op.null "xb" @ op.linear  
+    "xb" @ io.dump
 
+    ;; mlp
+    {
 
+    }
 %end
 

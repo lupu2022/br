@@ -11,7 +11,11 @@ std::ostream& operator<<(std::ostream& os, Cell& c) {
         os << "N:" << std::fixed << c.as_number();
     } else {
         auto t = c.as_tensor();
-        os << "T: (" << t->to_string() << " )";
+        if ( t != nullptr ) {
+            os << "T: (" << t->to_string() << " )";
+        } else {
+            os << "T: (null)";
+        }
     }
     return os;
 }
