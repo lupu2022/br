@@ -23,10 +23,8 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
         local_first.resize(first8, 0);
         local_last.resize(first8, 0);
 
-        int debug = 0;
-
         float *x = (float *)self->cuda_float()->data();
-        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x + debug, local_first.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
+        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x, local_first.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
 
         std::vector<size_t> pos = self->shape().vec();
         auto shape_ = self->shape().vec();
@@ -34,7 +32,7 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
             pos[i] = shape_[i] - 1;
         }
         pos.back() = shape_.back() - first8;
-        float* src = x + (self->items() - first8 - debug);
+        float* src = x + (self->items() - first8);
         CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(float), cudaMemcpyDeviceToHost, stream));
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -557,7 +555,7 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
 }
 
 template<DataType DT>
-ComputingReturn CUDATensor<DT>::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t y) {
+ComputingReturn CUDATensor<DT>::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t mask,  tensor_t y) {
     size_t batch = self->shape()[0];
     size_t heads = self->shape()[1];
     size_t tokens = self->shape()[2];
@@ -568,9 +566,10 @@ ComputingReturn CUDATensor<DT>::op_rotary_embed(tensor_t self, tensor_t cached, 
         float* in = (float *)data();
         float* cos_sin = (float *)cached->cuda_float()->data();
         float* out = (float *)y->cuda_float()->data();
+        int* m = (int *)mask->cuda_int()->data();
 
         auto stream = ComputingContext::cuda_stream;
-        cuda::rotary_embed<float>(in, cos_sin, out, batch * heads, tokens, hidden, stream);
+        cuda::rotary_embed<float>(in, cos_sin, m, out, batch, heads, tokens, hidden, stream);
 
         return OP_OK;
     }

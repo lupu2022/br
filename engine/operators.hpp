@@ -92,7 +92,7 @@ struct TransformerComputing {
     virtual ComputingReturn op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) {
         return OP_TODO_ERROR;
     }
-    virtual ComputingReturn op_rotary_embed(tensor_t self, tensor_t cached, tensor_t y) {
+    virtual ComputingReturn op_rotary_embed(tensor_t self, tensor_t cached, tensor_t mask, tensor_t y) {
         return OP_TODO_ERROR;
     }
     virtual ComputingReturn op_transpos_0213(tensor_t self, tensor_t y) {

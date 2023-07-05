@@ -12,8 +12,8 @@ int silu_product(const T *in_act, const T* in, T* out, const int items,
             cudaStream_t stream);
 
 template <typename T>
-int rotary_embed(const T *in, const T *cos_sin, T* out,
-            const int bs, const int len, const int dims,
+int rotary_embed(const T *in, const T *cos_sin, const int* mask, T* out,
+            const int bs, const int hnum, const int len, const int dims,
             cudaStream_t stream);
 
 template <typename T>
@@ -151,17 +151,23 @@ int rsqrt<float>(const float *in, float *out, const int len, float eps, cudaStre
 }
 
 //----------------
-__global__ void rotary_embed_float(const float *in, const float *cos_sin, float *out, const int bs, const int len, const int dims) {
+__global__ void rotary_embed_float(const float *in, const float *cos_sin, const int *mask, float *out, 
+                                   const int bs, const int hnum, const int len, const int dims) {
     int e = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( e >= len * bs ) {
+    if ( e >= bs * hnum * len ) {
         return;
     }
-    
-    int pos = (e % len);
     in = in + e * dims;
     out = out + e * dims;
 
-    cos_sin = cos_sin + pos * dims * 2;
+    int b = e / (hnum * len);
+    int l = e % len;
+
+    int pos = l + b * len;
+    if ( mask[pos] >= 1 ) { 
+        cos_sin = cos_sin + l * dims * 2;
+    }
+    
     for (int i = 0; i < dims / 2; i++) {
         int ii = i + dims/2;
         float x = in[i];
@@ -172,12 +178,12 @@ __global__ void rotary_embed_float(const float *in, const float *cos_sin, float 
 }
 
 template<>
-int rotary_embed<float>( const float *in, const float *cos_sin, float *out, 
-                         const int bs, const int len, const int dims, cudaStream_t stream) {
+int rotary_embed<float>( const float *in, const float *cos_sin, const int* mask, float *out, 
+                         const int bs, const int hnum, const int len, const int dims, cudaStream_t stream) {
     dim3 block_size(256);
-	dim3 num_of_blocks((len * bs + block_size.x - 1) / block_size.x);
+	dim3 num_of_blocks( (bs*hnum*len + block_size.x - 1) / block_size.x);
    
-    rotary_embed_float <<< num_of_blocks, block_size, 0, stream >>> (in, cos_sin, out, bs, len, dims);
+    rotary_embed_float <<< num_of_blocks, block_size, 0, stream >>> (in, cos_sin, mask, out, bs, hnum, len, dims);
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {

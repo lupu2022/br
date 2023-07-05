@@ -11,8 +11,8 @@ int silu_product(const T *in_act, const T* in, T* out, const int items,
             cudaStream_t stream);
 
 template <typename T>
-int rotary_embed(const T *in, const T *cos_sin, T* out,
-            const int bs, const int len, const int dims,
+int rotary_embed(const T *in, const T *cos_sin, const int* mask, T* out,
+            const int bs, const int hnum, const int len, const int dims,
             cudaStream_t stream);
 
 template <typename T>

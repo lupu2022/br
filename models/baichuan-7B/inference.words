@@ -100,11 +100,17 @@
     {
         "ids" @ "embed_tokens.weight" @ "xinput" @ op.embed
     }
+    
+    1  sync_layer_offload                           layer_forward "xa" @ 1 io.nccl.send
+    
 
-    1 sync_layer_offload                layer_forward 
+    ;2  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
 
 %end
 
 %def main_gpu_1
     prepare_input
+
+    1 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ io.dump
+
 %end

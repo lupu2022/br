@@ -123,9 +123,9 @@ ComputingReturn TensorType::op_rmsnorm(tensor_t self, tensor_t scale, tensor_t n
     op_check(ret, "rmsnorm");
 }
 
-ComputingReturn TensorType::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t y) {
+ComputingReturn TensorType::op_rotary_embed(tensor_t self, tensor_t cached, tensor_t mask, tensor_t y) {
     br_assert(self.get() == this, "can't be here!");
-    auto ret = impl()->op_rotary_embed(self, cached, y);
+    auto ret = impl()->op_rotary_embed(self, cached, mask, y);
     op_check(ret, "rotary_embed");
 }
 

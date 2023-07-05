@@ -342,11 +342,11 @@
         "yb" @ "zkey" @ op.transpos_0213
         "yc" @ "zvalue" @ op.transpos_0213
     }
-
-    ;; rotary position embeding
-    "zquery" @ "rotary_cache" @ "za" @ op.rotary_embed
-    "zkey" @ "rotary_cache" @ "zb" @ op.rotary_embed
     
+    ;; rotary position embeding
+    "zquery" @ "rotary_cache" @ "mask" @ "za" @ op.rotary_embed
+    "zkey" @ "rotary_cache" @ "mask" @ "zb" @ op.rotary_embed
+
     ;; attention
     {
         ;; get query@key
@@ -385,6 +385,8 @@
         "xa" @ "xc" @ "xa" @ op.add
     }
 
-
 %end
+
+
+
 

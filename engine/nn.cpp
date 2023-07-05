@@ -173,10 +173,11 @@ namespace nn {
     struct RotaryEmbed : public NativeWord {
         void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
+            tensor_t mask = stack.pop_tensor();
             tensor_t cached = stack.pop_tensor();
             tensor_t x = stack.pop_tensor();
 
-            x->op_rotary_embed(x, cached, out);
+            x->op_rotary_embed(x, cached, mask, out);
         }
         NWORD_CREATOR_DEFINE_LR( RotaryEmbed );
     };
