@@ -96,7 +96,7 @@
 %def main_gpu_0
     prepare_input
     
-    ;; embed & ln    
+    ;; embed    
     {
         "ids" @ "embed_tokens.weight" @ "xinput" @ op.embed
     }
@@ -140,6 +140,10 @@
     15 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
     16 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward
     
-    "xa" @ io.dump 
+    ;; ln & output    
+    {
+        "xa" @ "norm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
+    }
+    
 
 %end

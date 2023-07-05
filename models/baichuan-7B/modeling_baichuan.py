@@ -756,7 +756,7 @@ def verify_model():
     tokenizer.pad_token = tokenizer.unk_token
     config, model = load_baichuan();
 
-    inputs = tokenizer('hello world in the sky.', return_tensors='pt', max_length=8, padding='max_length');
+    inputs = tokenizer('hello world in the blue sky.', return_tensors='pt', max_length=12, padding='max_length');
     inputs = model.prepare_inputs_for_generation(**inputs);
     outputs = model(**inputs);
 
