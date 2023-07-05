@@ -58,11 +58,9 @@ struct ChatApplication {
                 write_all(ids.data(), len * sizeof(int));
                 write_all(masks.data(), len * sizeof(int));
 
-                /*
-                MPI_Recv(ids.data(), len, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                br::CollectiveContext::pipe_read(ids.data(), sizeof(int) * ids.size() );
 
                 std::cout << "===> " << tokenizer_->decode( ids) << std::endl;
-                */
             }
         }
 

@@ -143,7 +143,12 @@
     ;; ln & output    
     {
         "xa" @ "norm.weight" @ "norm2" @ "xb" @ "RMS_EPS" @ op.rmsnorm
+        "xb" @ "mask_" @ "lm_head.weight" @ "all_logits" @  op.last_logits 
     }
     
+    ;; sampling using tempture & top_p
+    "all_logits" @ "mask_" @ "ids_" @ "TEMPERATURE" @ "TOP_P" @ op.sampling_top_p
+
+    "ids_" @ 0 io.pipe.write
 
 %end
