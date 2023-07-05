@@ -38,7 +38,7 @@
     $DTYPE !
     $DEVICE !
 
-    "HIDDEN_SIZE" @  1 $DEVICE @ $DTYPE @  op.create  "norm.weight"  !
+    1 1 "HIDDEN_SIZE" @ 3 $DEVICE @ $DTYPE @  op.create  "norm.weight"  !
     "VOCAB_SIZE" @ "HIDDEN_SIZE" @ 2 $DEVICE @ $DTYPE @ op.create "lm_head.weight" !
 
     $DTYPE  !!

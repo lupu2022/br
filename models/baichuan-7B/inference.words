@@ -100,17 +100,46 @@
     {
         "ids" @ "embed_tokens.weight" @ "xinput" @ op.embed
     }
-    
+   
     1  sync_layer_offload                           layer_forward "xa" @ 1 io.nccl.send
-    
-
-    ;2  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    2  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    3  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send 
+    4  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    5  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    6  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    7  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    8  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    9  sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    10 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    11 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    12 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    13 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    14 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    15 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
+    16 sync_layer_offload "xinput" @ 1 io.nccl.recv layer_forward "xa" @ 1 io.nccl.send
 
 %end
 
 %def main_gpu_1
     prepare_input
 
-    1 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ io.dump
+    1 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    2 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    3 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    4 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    5 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    6 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    7 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    8 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    9 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    10 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    11 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    12 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    13 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    14 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    15 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward "xa" @ 0 io.nccl.send
+    16 sync_layer_offload "xinput" @ 0 io.nccl.recv layer_forward
+    
+    "xa" @ io.dump 
 
 %end

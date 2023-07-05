@@ -1,3 +1,5 @@
+#include <chrono>
+
 #include "tensortype.hpp"
 #include "context.hpp"
 #include "nn.hpp"
@@ -20,6 +22,24 @@ namespace nn {
         }
         NWORD_CREATOR_DEFINE_LR(Sync)
     };
+
+    struct CheckPoint : public NativeWord {
+        static std::chrono::time_point<std::chrono::high_resolution_clock> ck;
+
+        void run(Stack& stack) override {
+            int flag = stack.pop_number();
+            if ( flag == 0 ) {
+                ck = std::chrono::high_resolution_clock::now();
+            } else {
+                auto stop = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - ck);
+                std::cout << "+++++ " << duration.count() << " +++++"<< std::endl;
+            }
+        }
+        NWORD_CREATOR_DEFINE_LR(CheckPoint)
+    };
+    std::chrono::time_point<std::chrono::high_resolution_clock> CheckPoint::ck;
+
     struct Create : public NativeWord {
         void run(Stack& stack) override {
             auto dtype = stack.pop_string();
@@ -509,6 +529,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("io.pipe.write", io::PipeWrite::creator );
 
     env.insert_native_word("op.sync", nn::Sync::creator );
+    env.insert_native_word("op.check", nn::CheckPoint::creator );
     env.insert_native_word("op.create", nn::Create::creator );
     env.insert_native_word("op.null", nn::Null::creator );
     env.insert_native_word("op.zero", nn::Zero::creator );
