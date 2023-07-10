@@ -305,8 +305,8 @@ TensorType::~TensorType() {
         cuda_float_t* tensor = std::get<CUDA_FLOAT>(impl_);
         delete tensor;
     }
-    if ( impl_index() == ImplType::CUDA_FP16 ) {
-        cuda_fp16_t* tensor = std::get<CUDA_FP16>(impl_);
+    if ( impl_index() == ImplType::CUDA_BF16 ) {
+        cuda_bf16_t* tensor = std::get<CUDA_BF16>(impl_);
         delete tensor;
     }
     if ( impl_index() == ImplType::CPU_FLOAT ) {
@@ -324,8 +324,8 @@ TransformerComputing* TensorType::impl() {
         cuda_int_t* tensor = std::get<CUDA_INT>(impl_);
         return tensor;
     }
-    if ( impl_index() == ImplType::CUDA_FP16 ) {
-        cuda_fp16_t* tensor = std::get<CUDA_FP16>(impl_);
+    if ( impl_index() == ImplType::CUDA_BF16 ) {
+        cuda_bf16_t* tensor = std::get<CUDA_BF16>(impl_);
         return tensor;
     }
     if ( impl_index() == ImplType::CPU_FLOAT ) {
@@ -336,8 +336,8 @@ TransformerComputing* TensorType::impl() {
         cpu_int_t* tensor = std::get<CPU_INT>(impl_);
         return tensor;
     }
-    if ( impl_index() == ImplType::CPU_FP16 ) {
-        cpu_fp16_t* tensor = std::get<CPU_FP16>(impl_);
+    if ( impl_index() == ImplType::CPU_BF16 ) {
+        cpu_bf16_t* tensor = std::get<CPU_BF16>(impl_);
         return tensor;
     }
     br_panic("Can't be here!");

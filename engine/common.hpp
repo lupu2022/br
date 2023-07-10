@@ -67,11 +67,17 @@
 namespace br {
 
 // fp16 stuff
-using local_fp16 = uint16_t;
-using device_fp16 = __half;
+using local_bf16 = uint16_t;
 
-float fp16_to_fp32(local_fp16 value);
-local_fp16 fp32_to_fp16(float value);
+inline float bf16_to_fp32(local_bf16 value) {
+    unsigned int proc = value<<16;
+    return *reinterpret_cast<float*>(&proc);
+}
+
+inline local_bf16 fp32_to_bf16(float value) {
+    local_bf16 d = (*reinterpret_cast<unsigned int *>(&value))>>16;
+    return d;
+}
 
 // some common help functions
 inline void _M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg) {
