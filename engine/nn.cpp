@@ -54,10 +54,10 @@ namespace nn {
                 t = br::create_cuda_int(shape);
             } else if (dtype == "int" && device=="cpu") {
                 t = br::create_cpu_int(shape);
-            } else if ( dtype == "bf16" && device == "cuda" ) {
-                t = br::create_cuda_bf16(shape);
-            } else if ( dtype == "bf16" && device == "cpu" ) {
-                t = br::create_cpu_bf16(shape);
+            } else if ( dtype == "fp16" && device == "cuda" ) {
+                t = br::create_cuda_fp16(shape);
+            } else if ( dtype == "fp16" && device == "cpu" ) {
+                t = br::create_cpu_fp16(shape);
             } else {
                 br_panic("Can' be here!");
             }

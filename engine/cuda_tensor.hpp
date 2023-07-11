@@ -31,8 +31,8 @@ struct CUDATensor : public TransformerComputing {
 
         if ( _DTYPE_ == DataType::Float ) {
             dtype = CUDNN_DATA_FLOAT;
-        } else if ( _DTYPE_ == DataType::BF16 ) {
-            dtype = CUDNN_DATA_BFLOAT16;
+        } else if ( _DTYPE_ == DataType::FP16 ) {
+            dtype = CUDNN_DATA_HALF;
         } else if ( _DTYPE_ == DataType::Int ) {
             dtype = CUDNN_DATA_INT32;
         } else {
@@ -96,12 +96,13 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_softmax_attn_backward(tensor_t self, tensor_t attn, tensor_t v, tensor_t attn_g, tensor_t v_g) override;
     ComputingReturn op_qk_backward(tensor_t self, tensor_t q, tensor_t k, tensor_t q_g, tensor_t k_g) override;
 
+
 private:
     void*                       mem_;
     const bool                  owner_;
 
     friend struct CUDATensor<DataType::Float>;
-    friend struct CUDATensor<DataType::BF16>;
+    friend struct CUDATensor<DataType::FP16>;
 };
 
 

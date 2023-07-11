@@ -11,8 +11,6 @@
 
 namespace br {
 
-using device_bf16 = __nv_bfloat16;
-
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
     size_t first8 = std::min(self->items(), (size_t)8);
@@ -51,16 +49,16 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
         std::cout << std::endl;
         return OP_OK;
     }
-    if ( DT == DataType::BF16 ) {
+    if ( DT == DataType::FP16 ) {
         auto stream = ComputingContext::cuda_stream;
-        std::vector<local_bf16> local_first;
-        std::vector<local_bf16> local_last;
+        std::vector<local_fp16> local_first;
+        std::vector<local_fp16> local_last;
 
         local_first.resize(first8, 0);
         local_last.resize(first8, 0);
 
-        auto x = self->cuda_bf16();
-        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(local_bf16), cudaMemcpyDeviceToHost, stream));
+        auto x = self->cuda_fp16();
+        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
 
         std::vector<size_t> pos = self->shape().vec();
         auto shape_ = self->shape().vec();
@@ -68,19 +66,19 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
             pos[i] = shape_[i] - 1;
         }
         pos.back() = shape_.back() - first8;
-        void* src = (device_bf16 *)x->data() + self->items() - first8;
-        CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(local_bf16), cudaMemcpyDeviceToHost, stream));
+        void* src = (device_fp16 *)x->data() + self->items() - first8;
+        CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
 
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
-            std::cout << bf16_to_fp32(local_first[i]) << " ";
+            std::cout << fp16_to_fp32(local_first[i]) << " ";
         }
         std::cout << std::endl;
         std::cout << "Last " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
-            std::cout << bf16_to_fp32(local_last[i]) << " ";
+            std::cout << fp16_to_fp32(local_last[i]) << " ";
         }
         std::cout << std::endl;
         return OP_OK;
@@ -149,7 +147,7 @@ ComputingReturn CUDATensor<DT>::io_load(tensor_t self, const char* fileName) {
         CUDA_CHECK(cudaMemcpyAsync(y, x, src.size() * sizeof(int), cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
-    if ( DT == DataType::BF16 ) {
+    if ( DT == DataType::FP16 ) {
         std::vector<unsigned short> src;
         read_data(fileName, src);
 
@@ -173,7 +171,7 @@ ComputingReturn CUDATensor<DT>::io_nccl_send(tensor_t self, int dst) {
                              ComputingContext::cuda_stream) );
         return OP_OK;
     }
-    if ( DT == DataType::BF16 ) {
+    if ( DT == DataType::FP16 ) {
         NCCL_CHECK( ncclSend(data(), self->items(), ncclFloat16, dst,
                              CollectiveContext::nccl_comm,
                              ComputingContext::cuda_stream) );
@@ -197,7 +195,7 @@ ComputingReturn CUDATensor<DT>::io_nccl_recv(tensor_t self, int dst) {
         return OP_OK;
     }
 
-    if ( DT == DataType::BF16 ) {
+    if ( DT == DataType::FP16 ) {
         NCCL_CHECK( ncclRecv(data(), self->items(), ncclFloat16, dst,
                              CollectiveContext::nccl_comm,
                              ComputingContext::cuda_stream) );
@@ -421,10 +419,10 @@ ComputingReturn CUDATensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, ten
 
         return OP_OK;
     }
-    if ( table->dtype() == DataType::BF16 ) {
-        device_bf16* from = (device_bf16 *)table->cuda_bf16()->data();
-        device_bf16* out = (device_bf16 *)outspace->cuda_bf16()->data();
-        //cuda::embed_forward<device_bf16>(text, from, out, batch*len, hidden, stream);
+    if ( table->dtype() == DataType::FP16 ) {
+        device_fp16* from = (device_fp16 *)table->cuda_fp16()->data();
+        device_fp16* out = (device_fp16 *)outspace->cuda_fp16()->data();
+        cuda::embed_forward<device_fp16>(text, from, out, batch*len, hidden, stream);
 
         return OP_OK;
     }
@@ -1493,9 +1491,9 @@ tensor_t create_cuda_float(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
-tensor_t create_cuda_bf16(std::vector<size_t>& shape_) {
+tensor_t create_cuda_fp16(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
-    CUDATensor<DataType::BF16>* tensor = new CUDATensor<DataType::BF16>(shape);
+    CUDATensor<DataType::FP16>* tensor = new CUDATensor<DataType::FP16>(shape);
     return std::make_shared<TensorType>(tensor, shape);
 }
 

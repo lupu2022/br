@@ -40,9 +40,9 @@ ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
         }
         return OP_OK;
     }
-    if ( _DTYPE_ == DataType::BF16 ) {
-        local_bf16* dst = (local_bf16 *)data();
-        local_bf16 v = fp32_to_bf16(value);
+    if ( _DTYPE_ == DataType::FP16 ) {
+        local_fp16* dst = (local_fp16 *)data();
+        local_fp16 v = fp32_to_fp16(value);
         for (size_t i = 0; i < self->items(); i++) {
             dst[i] = v;
         }
@@ -65,10 +65,10 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
         auto* newCpuTensor = new CPUTensor<DataType::Int>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
-    if ( _DTYPE_ == DataType::BF16 ) {
+    if ( _DTYPE_ == DataType::FP16 ) {
         ShapeType newShape(newShape_);
-        local_bf16 *newData = (local_bf16 *)data() + offset;
-        auto* newCpuTensor = new CPUTensor<DataType::BF16>(newData);
+        local_fp16 *newData = (local_fp16 *)data() + offset;
+        auto* newCpuTensor = new CPUTensor<DataType::FP16>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
     return OP_TODO_ERROR;
@@ -92,12 +92,12 @@ ComputingReturn CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tens
         }
         return OP_OK;
     }
-    if ( table->dtype() == DataType::BF16 ) {
-        local_bf16* from = (local_bf16 *)table->cpu_bf16()->data();
-        local_bf16* out = (local_bf16 *)outspace->cpu_bf16()->data();
+    if ( table->dtype() == DataType::FP16 ) {
+        local_fp16* from = (local_fp16 *)table->cpu_fp16()->data();
+        local_fp16* out = (local_fp16 *)outspace->cpu_fp16()->data();
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
-            memcpy(out, from + hidden * id, hidden * sizeof(local_bf16) );
+            memcpy(out, from + hidden * id, hidden * sizeof(local_fp16) );
             out += hidden;
         }
         return OP_OK;
@@ -140,17 +140,17 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
 
         return OP_OK;
     }
-    if ( _DTYPE_ == DataType::BF16 ) {
-        local_bf16* d = (local_bf16 *)data();
+    if ( _DTYPE_ == DataType::FP16 ) {
+        local_fp16* d = (local_fp16 *)data();
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
-            std::cout << bf16_to_fp32(d[i]) << " ";
+            std::cout << fp16_to_fp32(d[i]) << " ";
         }
         std::cout << std::endl;
-        d = (local_bf16 *)data() + self->items() - first8;
+        d = (local_fp16 *)data() + self->items() - first8;
         std::cout << "Last " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
-            std::cout << bf16_to_fp32(d[i]) << " ";
+            std::cout << fp16_to_fp32(d[i]) << " ";
         }
         std::cout << std::endl;
 
@@ -249,9 +249,9 @@ tensor_t create_cpu_float(std::vector<size_t>& shape_) {
     return std::make_shared<TensorType>(tensor, shape);
 }
 
-tensor_t create_cpu_bf16(std::vector<size_t>& shape_) {
+tensor_t create_cpu_fp16(std::vector<size_t>& shape_) {
     ShapeType shape(shape_);
-    CPUTensor<DataType::BF16>* tensor = new CPUTensor<DataType::BF16>(shape);
+    CPUTensor<DataType::FP16>* tensor = new CPUTensor<DataType::FP16>(shape);
     return std::make_shared<TensorType>(tensor, shape);
 }
 

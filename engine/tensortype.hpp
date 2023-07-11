@@ -15,7 +15,8 @@ namespace br {
 enum DataType {
     Float = 0,
     BF16 = 1,
-    Int = 2,
+    FP16 = 2,
+    Int = 3,
 };
 
 inline size_t DataType_size(DataType type_) {
@@ -23,6 +24,7 @@ inline size_t DataType_size(DataType type_) {
         case Int:
         case Float:
             return 4;
+        case FP16:
         case BF16:
             return 2;
         default:
@@ -36,6 +38,8 @@ inline const char* DataType_name(DataType type_) {
     switch( type_ ) {
         case Float:
             return "f32";
+        case FP16:
+            return "f16";
         case BF16:
             return "bf16";
         case Int:
@@ -121,10 +125,10 @@ private:
 template <DataType _DTYPE_> struct CPUTensor;
 template <DataType _DTYPE_> struct CUDATensor;
 using cpu_float_t = CPUTensor<DataType::Float>;
-using cpu_bf16_t = CPUTensor<DataType::BF16>;
+using cpu_fp16_t = CPUTensor<DataType::FP16>;
 using cpu_int_t = CPUTensor<DataType::Int>;
 using cuda_float_t = CUDATensor<DataType::Float>;
-using cuda_bf16_t = CUDATensor<DataType::BF16>;
+using cuda_fp16_t = CUDATensor<DataType::FP16>;
 using cuda_int_t = CUDATensor<DataType::Int>;
 
 // TensorType is all you need
@@ -134,8 +138,8 @@ public:
     TensorType() = delete;
     TensorType(cpu_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), marker_(0), impl_(tensor) {};
     TensorType(cuda_float_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Float), marker_(0), impl_(tensor) {};
-    TensorType(cpu_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), marker_(0), impl_(tensor) {};
-    TensorType(cuda_bf16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::BF16), marker_(0), impl_(tensor) {};
+    TensorType(cpu_fp16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::FP16), marker_(0), impl_(tensor) {};
+    TensorType(cuda_fp16_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::FP16), marker_(0), impl_(tensor) {};
     TensorType(cpu_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), marker_(0), impl_(tensor) {};
     TensorType(cuda_int_t* tensor, const ShapeType& shape) : shape_(shape), dtype_(DataType::Int), marker_(0), impl_(tensor) {};
     virtual ~TensorType();
@@ -163,11 +167,11 @@ public:
         }
         return std::get<CPU_FLOAT>(impl_);
     }
-    cpu_bf16_t* cpu_bf16() {
-        if ( impl_.index() != CPU_BF16 ) {
-            br_panic("Cant get  from a tensor");
+    cpu_fp16_t* cpu_fp16() {
+        if ( impl_.index() != CPU_FP16 ) {
+            br_panic("Cant get cpu_fp16 from a tensor");
         }
-        return std::get<CPU_BF16>(impl_);
+        return std::get<CPU_FP16>(impl_);
     }
     cpu_int_t* cpu_int() {
         if ( impl_.index() != CPU_INT ) {
@@ -181,11 +185,11 @@ public:
         }
         return std::get<CUDA_FLOAT>(impl_);
     }
-    cuda_bf16_t* cuda_bf16() {
-        if ( impl_.index() != CUDA_BF16 ) {
-            br_panic("Cant get cuda_bf16 from a tensor");
+    cuda_fp16_t* cuda_fp16() {
+        if ( impl_.index() != CUDA_FP16 ) {
+            br_panic("Cant get cuda_fp16 from a tensor");
         }
-        return std::get<CUDA_BF16>(impl_);
+        return std::get<CUDA_FP16>(impl_);
     }
     cuda_int_t* cuda_int() {
         if ( impl_.index() != CUDA_INT ) {
@@ -219,7 +223,7 @@ public:
         if (impl_index() == ImplType::CPU_FLOAT) {
             return true;
         }
-        if (impl_index() == ImplType::CPU_BF16) {
+        if (impl_index() == ImplType::CPU_FP16) {
             return true;
         }
         if (impl_index() == ImplType::CPU_INT) {
@@ -232,7 +236,7 @@ public:
         if (impl_index() == ImplType::CUDA_FLOAT) {
             return true;
         }
-        if (impl_index() == ImplType::CUDA_BF16) {
+        if (impl_index() == ImplType::CUDA_FP16) {
             return true;
         }
         if (impl_index() == ImplType::CUDA_INT) {
@@ -318,25 +322,25 @@ private:
     // ImplType enum order is same as TensorImpl's variant
     enum ImplType {
         CPU_FLOAT,
-        CPU_BF16,
+        CPU_FP16,
         CPU_INT,
         CUDA_FLOAT,
-        CUDA_BF16,
+        CUDA_FP16,
         CUDA_INT,
     };
     using TensorImpl =   std::variant<  cpu_float_t*,
-                                        cpu_bf16_t*,
+                                        cpu_fp16_t*,
                                         cpu_int_t*,
                                         cuda_float_t*,
-                                        cuda_bf16_t*,
+                                        cuda_fp16_t*,
                                         cuda_int_t* >;
     TensorImpl impl_;
 };
 
 tensor_t create_cuda_float(std::vector<size_t>& shape);
 tensor_t create_cpu_float(std::vector<size_t>& shape);
-tensor_t create_cuda_bf16(std::vector<size_t>& shape);
-tensor_t create_cpu_bf16(std::vector<size_t>& shape);
+tensor_t create_cuda_fp16(std::vector<size_t>& shape);
+tensor_t create_cpu_fp16(std::vector<size_t>& shape);
 tensor_t create_cuda_int(std::vector<size_t>& shape);
 tensor_t create_cpu_int(std::vector<size_t>& shape);
 
