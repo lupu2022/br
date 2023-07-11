@@ -12,7 +12,8 @@ from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutpu
 from transformers.utils import logging
 from transformers.generation.utils import GenerationConfig
 
-from .configuration_baichuan import BaichuanConfig
+#from .configuration_baichuan import BaichuanConfig
+import configuration_baichuan
 
 logger = logging.get_logger(__name__)
 
@@ -81,7 +82,7 @@ class MLP(torch.nn.Module):
 
 class BaichuanAttention(torch.nn.Module):
 
-    def __init__(self, config: BaichuanConfig):
+    def __init__(self, config: configuration_baichuan.BaichuanConfig):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
@@ -149,7 +150,7 @@ class BaichuanAttention(torch.nn.Module):
 
 
 class BaichuanLayer(torch.nn.Module):
-    def __init__(self, config: BaichuanConfig):
+    def __init__(self, config: configuration_baichuan.BaichuanConfig):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.self_attn = BaichuanAttention(config=config)
@@ -199,7 +200,7 @@ class BaichuanLayer(torch.nn.Module):
 
 
 class BaichuanPreTrainedModel(PreTrainedModel):
-    config_class = BaichuanConfig
+    config_class = configuration_baichuan.BaichuanConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _no_split_modules = ["BaichuanLayer"]
@@ -223,7 +224,7 @@ class BaichuanPreTrainedModel(PreTrainedModel):
 
 
 class BaichuanModel(BaichuanPreTrainedModel):
-    def __init__(self, config: BaichuanConfig):
+    def __init__(self, config: configuration_baichuan.BaichuanConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
@@ -235,14 +236,14 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.gradient_checkpointing = config.gradient_checkpointing
         self.post_init()
         self.max_cache_pos = config.model_max_length
-        self.first_run = True    
+        self.first_run = True
 
     def get_input_embeddings(self):
         return self.embed_tokens
-        
+
     def set_input_embeddings(self, value):
-        self.embed_tokens = value  
-        
+        self.embed_tokens = value
+
     def get_alibi_mask(self, tensor, seq_length_with_past):
         if self.first_run:
             self.first_run = False
@@ -250,7 +251,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         if seq_length_with_past > self.max_cache_pos:
             self.max_cache_pos = seq_length_with_past
             self.register_buffer("future_mask", _gen_alibi_mask(self.n_head, self.max_cache_pos).to(tensor), persistent=False)
-        mask = self.future_mask[:self.n_head, :seq_length_with_past, :seq_length_with_past] 
+        mask = self.future_mask[:self.n_head, :seq_length_with_past, :seq_length_with_past]
         return mask
 
     def forward(
@@ -353,7 +354,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
         )
-    
+
 
 class BaichuanForCausalLM(BaichuanPreTrainedModel):
     def __init__(self, config):
@@ -387,7 +388,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-        )   
+        )
 
         hidden_states = outputs[0]
         logits = self.lm_head(hidden_states)
@@ -419,7 +420,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
 
     def prepare_inputs_for_generation(
             self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
-    ):  
+    ):
         if past_key_values:
             input_ids = input_ids[:, -1:]
 
@@ -430,11 +431,11 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
             model_inputs = {"input_ids": input_ids}
 
         model_inputs.update(
-            {   
+            {
                 "past_key_values": past_key_values,
                 "use_cache": kwargs.get("use_cache"),
-            }   
-        )   
+            }
+        )
         return model_inputs
 
     @staticmethod
@@ -452,7 +453,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
             raise ImportError(
                 f"Needs QLinear to run quantize."
             )
-        
+
         for layer in self.model.layers:
             layer.self_attn.W_pack = QLinear(
                 bits=bits,
@@ -479,7 +480,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
                 weight=layer.mlp.up_proj.weight,
                 bias = None,
             )
-        return self 
+        return self
 
     def _build_chat_input(self, tokenizer, messages: List[dict], max_new_tokens: int=0):
         max_new_tokens = max_new_tokens or self.generation_config.max_new_tokens
@@ -534,3 +535,49 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
             outputs = self.generate(input_ids, generation_config=generation_config)
             response = tokenizer.decode(outputs[0][len(input_ids[0]):], skip_special_tokens=True)
             return response
+
+def save_baichuan():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    checkpoint = "baichuan-inc/Baichuan-13B-Base"
+    model = AutoModelForCausalLM.from_pretrained(checkpoint, trust_remote_code=True, torch_dtype=torch.float32, low_cpu_mem_usage=True);
+
+    path = "pth/"
+
+    torch.save(model.lm_head.state_dict(), path + "lm_head.pth");
+    torch.save(model.model.embed_tokens.state_dict(), path + "embed_tokens.pth");
+    torch.save(model.model.norm.state_dict(), path + "norm.pth");
+
+    for i in range(0, 40):
+        hname = "h_" + str(i) + ".pth";
+        layer = model.model.layers[i];
+        print("saving.. " + str(i)  + " attention");
+        torch.save(layer.state_dict(), path + hname);
+
+def verify_baichuan():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    print("Creating a empty model...")
+    config = configuration_baichuan.BaichuanConfig();
+    model = BaichuanForCausalLM(config);
+    model.eval();
+
+    print("Loading embeddings...")
+    path = "pth/"
+
+    model.lm_head.load_state_dict( torch.load( path + "lm_head.pth") );
+    model.model.embed_tokens.load_state_dict( torch.load( path + "embed_tokens.pth") );
+    model.model.norm.load_state_dict( torch.load( path + "norm.pth") );
+
+    for i in range(40):
+        hname = "h_" + str(i) + ".pth";
+        print("load.. " + str(i)  + " attention");
+        model.model.layers[i].load_state_dict( torch.load(path + hname) );
+
+    tokenizer = AutoTokenizer.from_pretrained("baichuan-inc/Baichuan-13B-Base", trust_remote_code=True)
+    inputs = tokenizer('登鹳雀楼->王之涣\n夜雨寄北->', return_tensors='pt')
+    pred = model.generate(**inputs, max_new_tokens=64,repetition_penalty=1.1)
+    print(tokenizer.decode(pred.cpu()[0], skip_special_tokens=True))
+
+    return tokenizer, model
+
