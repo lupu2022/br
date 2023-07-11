@@ -4,6 +4,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import torch
+import torch.utils.checkpoint
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
@@ -235,7 +236,13 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.post_init()
         self.max_cache_pos = config.model_max_length
         self.first_run = True    
-    
+
+    def get_input_embeddings(self):
+        return self.embed_tokens
+        
+    def set_input_embeddings(self, value):
+        self.embed_tokens = value  
+        
     def get_alibi_mask(self, tensor, seq_length_with_past):
         if self.first_run:
             self.first_run = False

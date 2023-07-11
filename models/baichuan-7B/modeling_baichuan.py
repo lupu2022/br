@@ -714,7 +714,7 @@ def dump_binary_fp32():
 def save_baichuan():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    checkpoint = "baichuan-inc/baichuan-7B"
+    checkpoint = "baichuan-inc/Baichuan-7B"
     model = AutoModelForCausalLM.from_pretrained(checkpoint, device_map="auto", trust_remote_code=True)
 
     path = "pth/"
@@ -752,7 +752,7 @@ def load_baichuan():
 def verify_model():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("baichuan-inc/baichuan-7B", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained("baichuan-inc/Baichuan-7B", trust_remote_code=True)
     tokenizer.pad_token = tokenizer.unk_token
     config, model = load_baichuan();
 
