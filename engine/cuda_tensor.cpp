@@ -11,6 +11,8 @@
 
 namespace br {
 
+using device_fp16_t = __half;
+
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
     size_t first8 = std::min(self->items(), (size_t)8);
@@ -51,14 +53,14 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
     }
     if ( DT == DataType::FP16 ) {
         auto stream = ComputingContext::cuda_stream;
-        std::vector<local_fp16> local_first;
-        std::vector<local_fp16> local_last;
+        std::vector<local_fp16_t> local_first;
+        std::vector<local_fp16_t> local_last;
 
         local_first.resize(first8, 0);
         local_last.resize(first8, 0);
 
         auto x = self->cuda_fp16();
-        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
+        CUDA_CHECK(cudaMemcpyAsync(local_first.data(), x->data(), local_first.size() * sizeof(local_fp16_t), cudaMemcpyDeviceToHost, stream));
 
         std::vector<size_t> pos = self->shape().vec();
         auto shape_ = self->shape().vec();
@@ -66,8 +68,8 @@ ComputingReturn CUDATensor<DT>::io_dump(tensor_t self) {
             pos[i] = shape_[i] - 1;
         }
         pos.back() = shape_.back() - first8;
-        void* src = (device_fp16 *)x->data() + self->items() - first8;
-        CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(local_fp16), cudaMemcpyDeviceToHost, stream));
+        void* src = (device_fp16_t *)x->data() + self->items() - first8;
+        CUDA_CHECK(cudaMemcpyAsync(local_last.data(), src, local_last.size() * sizeof(local_fp16_t), cudaMemcpyDeviceToHost, stream));
 
         CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -244,14 +246,35 @@ ComputingReturn CUDATensor<DT>::op_fill(tensor_t self, float value) {
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_alibi(tensor_t self) {
+    int heads = self->shape()[1];
+    int tokens = self->shape()[3];
+
+    auto stream = ComputingContext::cuda_stream;
+    double base = 3 - log2(heads*1.0);
+    base = -1 * pow(2.0, base);
+    base = pow(2.0, base);
+
     if ( DT == DataType::Float ) {
-        int heads = self->shape()[1];
-        int tokens = self->shape()[3];
-        auto stream = ComputingContext::cuda_stream;
-
-        float* dst = (float *)data();
-        cuda::alibi<float>(dst, heads, tokens, stream);
-
+        std::vector<float> buffer;
+        for (int j = 0; j < heads; j++) {
+            double slope = pow(base, (j + 1) * 1.0);
+            for (int k = 0; k < (int)tokens; k++) {
+                buffer.push_back( k * 1.0 * slope);
+            }
+        }
+        CUDA_CHECK(cudaMemcpyAsync(data(), buffer.data(), DataType_size(DT) * self->items(),  cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
+    if ( DT == DataType::FP16 ) {
+        std::vector<local_fp16_t> buffer;
+        for (int j = 0; j < heads; j++) {
+            double slope = pow(base, (j + 1) * 1.0);
+            for (int k = 0; k < (int)tokens; k++) {
+                float v = k * 1.0 * slope;
+                buffer.push_back( fp32_to_fp16(v) );
+            }
+        }
+        CUDA_CHECK(cudaMemcpyAsync(data(), buffer.data(), DataType_size(DT) * self->items(),  cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
     return OP_TODO_ERROR;
@@ -299,10 +322,9 @@ ComputingReturn CUDATensor<DT>::op_causal_mask(tensor_t self, tensor_t out) {
     if ( out->dtype() == DataType::Float ) {
         float* dst = (float *)out->cuda_float()->data();
         cuda::causal_mask<float>(mask, dst, batch, tokens, stream);
-    } else {
-        return OP_TODO_ERROR;
+        return OP_OK;
     }
-    return OP_OK;
+    return OP_OUTPUT_ERROR;
 }
 
 template<DataType DT>
@@ -313,11 +335,11 @@ ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
             void* y = data();
 
             auto stream = ComputingContext::cuda_stream;
-            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * DataType_size(DT), cudaMemcpyHostToDevice, stream));
             return OP_OK;
         }
         auto stream = ComputingContext::cuda_stream;
-        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * sizeof(float), cudaMemcpyDeviceToDevice, stream));
+        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_float()->data(), self->items() * DataType_size(DT), cudaMemcpyDeviceToDevice, stream));
         return OP_OK;
     }
     if ( DT == DataType::Int ) {
@@ -326,11 +348,24 @@ ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
             void* y = data();
 
             auto stream = ComputingContext::cuda_stream;
-            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * sizeof(int), cudaMemcpyHostToDevice, stream));
+            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * DataType_size(DT), cudaMemcpyHostToDevice, stream));
             return OP_OK;
         }
         auto stream = ComputingContext::cuda_stream;
-        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_int()->data(), self->items() * sizeof(int), cudaMemcpyDeviceToDevice, stream));
+        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_int()->data(), self->items() * DataType_size(DT), cudaMemcpyDeviceToDevice, stream));
+        return OP_OK;
+    }
+    if ( DT == DataType::FP16 ) {
+        if ( src->is_cpu() ) {
+            void* x = src->cpu_fp16()->data();
+            void* y = data();
+
+            auto stream = ComputingContext::cuda_stream;
+            CUDA_CHECK(cudaMemcpyAsync(y, x, self->items() * DataType_size(DT), cudaMemcpyHostToDevice, stream));
+            return OP_OK;
+        }
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync(data(), src->cuda_fp16()->data(), self->items() * DataType_size(DT), cudaMemcpyDeviceToDevice, stream));
         return OP_OK;
     }
     return OP_TODO_ERROR;
@@ -420,9 +455,9 @@ ComputingReturn CUDATensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, ten
         return OP_OK;
     }
     if ( table->dtype() == DataType::FP16 ) {
-        device_fp16* from = (device_fp16 *)table->cuda_fp16()->data();
-        device_fp16* out = (device_fp16 *)outspace->cuda_fp16()->data();
-        cuda::embed_forward<device_fp16>(text, from, out, batch*len, hidden, stream);
+        device_fp16_t* from = (device_fp16_t *)table->cuda_fp16()->data();
+        device_fp16_t* out = (device_fp16_t *)outspace->cuda_fp16()->data();
+        cuda::embed_forward<device_fp16_t>(text, from, out, batch*len, hidden, stream);
 
         return OP_OK;
     }

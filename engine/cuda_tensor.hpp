@@ -102,6 +102,7 @@ private:
     const bool                  owner_;
 
     friend struct CUDATensor<DataType::Float>;
+    friend struct CUDATensor<DataType::Int>;
     friend struct CUDATensor<DataType::FP16>;
 };
 

@@ -41,8 +41,8 @@ ComputingReturn CPUTensor<_DTYPE_>::op_fill(tensor_t self, float value) {
         return OP_OK;
     }
     if ( _DTYPE_ == DataType::FP16 ) {
-        local_fp16* dst = (local_fp16 *)data();
-        local_fp16 v = fp32_to_fp16(value);
+        local_fp16_t* dst = (local_fp16_t *)data();
+        local_fp16_t v = fp32_to_fp16(value);
         for (size_t i = 0; i < self->items(); i++) {
             dst[i] = v;
         }
@@ -67,7 +67,7 @@ std::variant<ComputingReturn, tensor_t> CPUTensor<_DTYPE_>::op_view(tensor_t sel
     }
     if ( _DTYPE_ == DataType::FP16 ) {
         ShapeType newShape(newShape_);
-        local_fp16 *newData = (local_fp16 *)data() + offset;
+        local_fp16_t *newData = (local_fp16_t *)data() + offset;
         auto* newCpuTensor = new CPUTensor<DataType::FP16>(newData);
         return std::make_shared<TensorType>(newCpuTensor, newShape);
     }
@@ -93,11 +93,11 @@ ComputingReturn CPUTensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tens
         return OP_OK;
     }
     if ( table->dtype() == DataType::FP16 ) {
-        local_fp16* from = (local_fp16 *)table->cpu_fp16()->data();
-        local_fp16* out = (local_fp16 *)outspace->cpu_fp16()->data();
+        local_fp16_t* from = (local_fp16_t *)table->cpu_fp16()->data();
+        local_fp16_t* out = (local_fp16_t *)outspace->cpu_fp16()->data();
         for (size_t i = 0; i < batch*len; i++) {
             int id = text[i];
-            memcpy(out, from + hidden * id, hidden * sizeof(local_fp16) );
+            memcpy(out, from + hidden * id, hidden * sizeof(local_fp16_t) );
             out += hidden;
         }
         return OP_OK;
@@ -141,13 +141,13 @@ ComputingReturn CPUTensor<_DTYPE_>::io_dump(tensor_t self) {
         return OP_OK;
     }
     if ( _DTYPE_ == DataType::FP16 ) {
-        local_fp16* d = (local_fp16 *)data();
+        local_fp16_t* d = (local_fp16_t *)data();
         std::cout << "First " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(d[i]) << " ";
         }
         std::cout << std::endl;
-        d = (local_fp16 *)data() + self->items() - first8;
+        d = (local_fp16_t *)data() + self->items() - first8;
         std::cout << "Last " << first8 << " : ";
         for(size_t i = 0; i < first8; i++) {
             std::cout << fp16_to_fp32(d[i]) << " ";
@@ -167,7 +167,7 @@ ComputingReturn CPUTensor<_DTYPE_>::io_save(tensor_t self, const char* fileName)
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName) {
-    if ( _DTYPE_ == DataType::Float ) {
+    if ( _DTYPE_ == DataType::Float || _DTYPE_ == DataType::Int) {
         const size_t count = 64;
         std::ifstream inf(fileName, std::ios::binary);
         if ( ! inf.is_open() ) {
@@ -176,13 +176,47 @@ ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName)
         }
 
         br_assert( self->items() % count == 0, "Only support block read");
-        for(size_t i = 0; i < self->items() / count; i++) {
-            float * src = (float *)data() + i * count;
-            inf.read( (char *)src , sizeof(float) * count);
+        if (_DTYPE_ == DataType::Float) {
+            for(size_t i = 0; i < self->items() / count; i++) {
+                float * src = (float *)data() + i * count;
+                inf.read( (char *)src , sizeof(float) * count);
+            }
+        }
+        if (_DTYPE_ == DataType::Int) {
+            for(size_t i = 0; i < self->items() / count; i++) {
+                int * src = (int *)data() + i * count;
+                inf.read( (char *)src , sizeof(int) * count);
+            }
         }
         inf.close();
         return OP_OK;
     }
+
+    if ( _DTYPE_ == DataType::FP16 ) {
+        const size_t count = 64;
+        std::ifstream inf(fileName, std::ios::binary);
+        if ( ! inf.is_open() ) {
+            std::cout << "Can't open " << fileName << std::endl;
+            br_panic("Can't open file");
+        }
+
+        br_assert( self->items() % count == 0, "Only support block read");
+
+        std::vector<float> buffer;
+        buffer.resize(count);
+
+        local_fp16_t* src = (local_fp16_t *)data();
+        for(size_t i = 0; i < self->items() / count; i++) {
+            inf.read( (char *)buffer.data() , sizeof(float) * count);
+            for (int j = 0; j < count; j++) {
+                src[i * count + j] = fp32_to_fp16(buffer[j]);
+            }
+        }
+
+        inf.close();
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
@@ -194,6 +228,10 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_recv(tensor_t self, int source) {
     }
     if ( _DTYPE_ == DataType::Int ) {
         MPI_Recv(data(), self->items(), MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        return OP_OK;
+    }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        MPI_Recv(data(), self->items(), MPI_SHORT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         return OP_OK;
     }
     return OP_TODO_ERROR;
@@ -209,6 +247,10 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_bcast(tensor_t self, int root) {
         MPI_Bcast(data(), self->items(), MPI_INT, root, MPI_COMM_WORLD);
         return OP_OK;
     }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        MPI_Bcast(data(), self->items(), MPI_SHORT, root, MPI_COMM_WORLD);
+        return OP_OK;
+    }
     return OP_TODO_ERROR;
 }
 
@@ -220,6 +262,10 @@ ComputingReturn CPUTensor<_DTYPE_>::io_mpi_send(tensor_t self, int dst) {
     }
     if ( _DTYPE_ == DataType::Int ) {
         MPI_Send(data(), self->items(), MPI_INT, dst, 0, MPI_COMM_WORLD);
+        return OP_OK;
+    }
+    if ( _DTYPE_ == DataType::FP16 ) {
+        MPI_Send(data(), self->items(), MPI_SHORT, dst, 0, MPI_COMM_WORLD);
         return OP_OK;
     }
     return OP_TODO_ERROR;

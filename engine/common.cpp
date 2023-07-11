@@ -37,7 +37,7 @@ static inline uint32_t fp32_to_bits(float f) {
 }
 
 namespace br {
-float fp16_to_fp32(local_fp16 value) {
+float fp16_to_fp32(local_fp16_t value) {
     uint16_t h = value;
     /*
 	 * Extend the half-precision floating-point number to 32 bits and shift to the upper part of the 32-bit word:
@@ -146,7 +146,7 @@ float fp16_to_fp32(local_fp16 value) {
 	return fp32_from_bits(result);
 }
 
-local_fp16 fp32_to_fp16(float value) {
+local_fp16_t fp32_to_fp16(float value) {
     float f = value;
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) || defined(__GNUC__) && !defined(__STRICT_ANSI__)
 	const float scale_to_inf = 0x1.0p+112f;
