@@ -38,6 +38,8 @@ ComputingReturn TensorType::op_rotary_cache(tensor_t self, float base) {
 ComputingReturn TensorType::op_causal_mask(tensor_t self, tensor_t out) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(self->dtype() == DataType::Int, " mask must be int !");
+    br_assert(shape().dim() == 2, "op_causal_mask input mask shape: [batch, length]");
+    br_assert(out->shape().dim() == 4, "op_causal_mask input mask shape: [batch, 1, length, length]");
     auto ret = impl()->op_causal_mask(self, out);
     op_check(ret, "causal_mask");
 }
@@ -100,18 +102,23 @@ ComputingReturn TensorType::op_scale(tensor_t self, float scale) {
 
 ComputingReturn TensorType::op_add(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(items() == c->items(), "add input and output must has same size");
     auto ret = impl()->op_add(self, b, c);
     op_check(ret, "add");
 }
 
 ComputingReturn TensorType::op_mul(tensor_t self, tensor_t b, tensor_t c) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(items() == c->items(), "add input and output must has same size");
     auto ret = impl()->op_mul(self, b, c);
     op_check(ret, "add");
 }
 
 ComputingReturn TensorType::op_linear(tensor_t self, tensor_t w, tensor_t b, tensor_t y) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(shape().dim() == 3, " linear input shape: [batch, len, hidden] ");
+    br_assert(w->shape().dim() == 2, " linear weight shape: [outSize, inSize] ");
+    br_assert(w->shape()[1] == shape()[2], " linear input and weight must match" );
     auto ret = impl()->op_linear(self, w, b, y);
     op_check(ret, "linear");
 }

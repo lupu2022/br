@@ -469,6 +469,12 @@ std::variant<ComputingReturn, tensor_t> CUDATensor<DT>::op_view(tensor_t self, s
         auto* newCudaTensor = new CUDATensor<DataType::Int>(newData);
         return std::make_shared<TensorType>(newCudaTensor, newShape);
     }
+    if ( DT == DataType::FP16 ) {
+        ShapeType newShape(newShape_);
+        device_fp16_t *newData = (device_fp16_t *)data() + offset;
+        auto* newCudaTensor = new CUDATensor<DataType::FP16>(newData);
+        return std::make_shared<TensorType>(newCudaTensor, newShape);
+    }
     return OP_TODO_ERROR;
 }
 
@@ -495,23 +501,22 @@ ComputingReturn CUDATensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, ten
 
         return OP_OK;
     }
-    return OP_TODO_ERROR;
+    return OP_OUTPUT_ERROR;
 }
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnOpTensorDescriptor_t opTensorDesc;
+
+    CUDNN_CHECK( cudnnCreateOpTensorDescriptor(&opTensorDesc) );
     if ( DT == DataType::Float ) {
         auto adesc = create_cudnn_td_with( self->shape().vec() );
         auto bdesc = b->cuda_float()->create_cudnn_td_with( b->shape().vec() );
         auto cdesc = c->cuda_float()->create_cudnn_td_with( c->shape().vec() );
 
-        float alpha = 1.0;
-        float beta = 0.0;
-
-        cudnnOpTensorDescriptor_t opTensorDesc;
-        CUDNN_CHECK( cudnnCreateOpTensorDescriptor(&opTensorDesc) );
         CUDNN_CHECK( cudnnSetOpTensorDescriptor(opTensorDesc, CUDNN_OP_TENSOR_ADD, CUDNN_DATA_FLOAT, CUDNN_PROPAGATE_NAN) );
-
         CUDNN_CHECK( cudnnOpTensor(ComputingContext::cudnn_handle,
                                     opTensorDesc,
                                     &alpha, adesc, data(),
@@ -519,7 +524,21 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
                                     &beta,  cdesc, c->cuda_float()->data()) );
 
         CUDNN_CHECK( cudnnDestroyOpTensorDescriptor(opTensorDesc) );
+        return OP_OK;
+    }
+    if ( DT == DataType::FP16 ) {
+        auto adesc = create_cudnn_td_with( self->shape().vec() );
+        auto bdesc = b->cuda_fp16()->create_cudnn_td_with( b->shape().vec() );
+        auto cdesc = c->cuda_fp16()->create_cudnn_td_with( c->shape().vec() );
 
+        CUDNN_CHECK( cudnnSetOpTensorDescriptor(opTensorDesc, CUDNN_OP_TENSOR_ADD, CUDNN_DATA_FLOAT, CUDNN_PROPAGATE_NAN) );
+        CUDNN_CHECK( cudnnOpTensor(ComputingContext::cudnn_handle,
+                                    opTensorDesc,
+                                    &alpha, adesc, data(),
+                                    &alpha, bdesc, b->cuda_fp16()->data(),
+                                    &beta,  cdesc, c->cuda_fp16()->data()) );
+
+        CUDNN_CHECK( cudnnDestroyOpTensorDescriptor(opTensorDesc) );
         return OP_OK;
     }
 
@@ -528,18 +547,17 @@ ComputingReturn CUDATensor<DT>::op_add(tensor_t self, tensor_t b, tensor_t c) {
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_mul(tensor_t self, tensor_t b, tensor_t c) {
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnOpTensorDescriptor_t opTensorDesc;
+
+    CUDNN_CHECK( cudnnCreateOpTensorDescriptor(&opTensorDesc) );
     if ( DT == DataType::Float ) {
         auto adesc = create_cudnn_td_with( self->shape().vec() );
         auto bdesc = b->cuda_float()->create_cudnn_td_with( b->shape().vec() );
         auto cdesc = c->cuda_float()->create_cudnn_td_with( c->shape().vec() );
 
-        float alpha = 1.0;
-        float beta = 0.0;
-
-        cudnnOpTensorDescriptor_t opTensorDesc;
-        CUDNN_CHECK( cudnnCreateOpTensorDescriptor(&opTensorDesc) );
         CUDNN_CHECK( cudnnSetOpTensorDescriptor(opTensorDesc, CUDNN_OP_TENSOR_MUL, CUDNN_DATA_FLOAT, CUDNN_PROPAGATE_NAN) );
-
         CUDNN_CHECK( cudnnOpTensor(ComputingContext::cudnn_handle,
                                     opTensorDesc,
                                     &alpha, adesc, data(),
@@ -547,9 +565,25 @@ ComputingReturn CUDATensor<DT>::op_mul(tensor_t self, tensor_t b, tensor_t c) {
                                     &beta,  cdesc, c->cuda_float()->data()) );
 
         CUDNN_CHECK( cudnnDestroyOpTensorDescriptor(opTensorDesc) );
-
         return OP_OK;
     }
+    if ( DT == DataType::FP16 ) {
+        auto adesc = create_cudnn_td_with( self->shape().vec() );
+        auto bdesc = b->cuda_fp16()->create_cudnn_td_with( b->shape().vec() );
+        auto cdesc = c->cuda_fp16()->create_cudnn_td_with( c->shape().vec() );
+
+        CUDNN_CHECK( cudnnSetOpTensorDescriptor(opTensorDesc, CUDNN_OP_TENSOR_MUL, CUDNN_DATA_FLOAT, CUDNN_PROPAGATE_NAN) );
+        CUDNN_CHECK( cudnnOpTensor(ComputingContext::cudnn_handle,
+                                    opTensorDesc,
+                                    &alpha, adesc, data(),
+                                    &alpha, bdesc, b->cuda_fp16()->data(),
+                                    &beta,  cdesc, c->cuda_fp16()->data()) );
+
+        CUDNN_CHECK( cudnnDestroyOpTensorDescriptor(opTensorDesc) );
+        return OP_OK;
+    }
+
+    return OP_TODO_ERROR;
 
     return OP_TODO_ERROR;
 }

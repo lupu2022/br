@@ -243,6 +243,16 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(Add)
     };
 
+    struct Mul : public NativeWord {
+        void run(Stack& stack) override {
+            tensor_t c = stack.pop_tensor();
+            tensor_t b = stack.pop_tensor();
+            tensor_t x = stack.pop_tensor();
+            x->op_mul(x, b, c);
+        }
+        NWORD_CREATOR_DEFINE_LR(Mul)
+    };
+
     struct Softmax : public NativeWord {
         void run(Stack& stack) override {
             tensor_t out = stack.pop_tensor();
@@ -547,6 +557,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.rotary_embed", nn::RotaryEmbed::creator );
     env.insert_native_word("op.transpos_0213", nn::Transpos0213::creator );
     env.insert_native_word("op.add", nn::Add::creator);
+    env.insert_native_word("op.mul", nn::Mul::creator);
     env.insert_native_word("op.querykey", nn::QueryKey::creator);
     env.insert_native_word("op.softmax", nn::Softmax::creator);
     env.insert_native_word("op.attn", nn::Attn::creator);
