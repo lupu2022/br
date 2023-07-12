@@ -81,7 +81,10 @@ public:
     const size_t dim() const {
         return dims_.size();
     }
-    const size_t operator[](int i) const {
+    const size_t operator[](size_t i) const {
+        if ( i >= dims_.size() ) {
+            br_panic("Access shape out of dims");
+        }
         return dims_[i];
     }
     bool operator == (const ShapeType& other) const {

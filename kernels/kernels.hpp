@@ -43,12 +43,12 @@ void LtSgemm(cublasLtHandle_t ltHandle,
              int n,
              int k,
              const float *alpha, /* host pointer */
-             const float *A,
+             const void *A, cudaDataType_t at,
              int lda,
-             const float *B,
+             const void *B, cudaDataType_t bt,
              int ldb,
              const float *beta, /* host pointer */
-             float *C,
+             void *C, cudaDataType_t ct,
              int ldc,
              void *workspace,
              size_t workspaceSize);

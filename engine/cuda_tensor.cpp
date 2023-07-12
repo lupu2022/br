@@ -293,24 +293,37 @@ ComputingReturn CUDATensor<DT>::op_rotary_cache(tensor_t self, float base) {
         inv_freq[i / 2] = f;
         inv_freq[dims / 2 + i / 2] = f;
     }
-    std::vector<float> cos_sin;
-    for (int l = 0; l < len; l++ ) {
-        for (int i = 0; i < dims; i++) {
-            //freqs.push_back( 1.0 * i * inv_freq[i] );
-            float f = 1.0 * l * inv_freq[i];
-            cos_sin.push_back( cos(f) );
-            cos_sin.push_back( sin(f) );
-        }
-    }
 
     if ( DT == DataType::Float ) {
+        std::vector<float> cos_sin;
+        for (int l = 0; l < len; l++ ) {
+            for (int i = 0; i < dims; i++) {
+                //freqs.push_back( 1.0 * i * inv_freq[i] );
+                float f = 1.0 * l * inv_freq[i];
+                cos_sin.push_back( cos(f) );
+                cos_sin.push_back( sin(f) );
+            }
+        }
         auto stream = ComputingContext::cuda_stream;
         CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
-    return OP_TODO_ERROR;
+    if ( DT == DataType::FP16 ) {
+        std::vector<local_fp16_t> cos_sin;
+        for (int l = 0; l < len; l++ ) {
+            for (int i = 0; i < dims; i++) {
+                //freqs.push_back( 1.0 * i * inv_freq[i] );
+                float f = 1.0 * l * inv_freq[i];
+                cos_sin.push_back( fp32_to_fp16(cos(f)) );
+                cos_sin.push_back( fp32_to_fp16(sin(f)) );
+            }
+        }
+        auto stream = ComputingContext::cuda_stream;
+        CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+        return OP_OK;
+    }
+    return OP_OUTPUT_ERROR;
 }
-
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_causal_mask(tensor_t self, tensor_t out) {
@@ -373,42 +386,63 @@ ComputingReturn CUDATensor<DT>::op_copy(tensor_t self, tensor_t src) {
 
 template<DataType DT>
 ComputingReturn CUDATensor<DT>::op_linear(tensor_t self, tensor_t w_, tensor_t b_, tensor_t y_) {
+    size_t batch = self->shape()[0];
+    size_t tokens = self->shape()[1];
+    size_t inSize = self->shape()[2];
+    size_t outSize = w_->shape()[0];
+
+    int m = outSize;
+    int n = batch * tokens;
+    int k = inSize;
+
+    float alpha = 1.0;
+    float beta = 0.0;
+
     if ( DT == DataType::Float ) {
-        auto x = this;
-        auto w = w_->cuda_float();
-        auto y = y_->cuda_float();
-
-        size_t batch = self->shape()[0];
-        size_t tokens = self->shape()[1];
-        size_t inSize = self->shape()[2];
-        size_t outSize = w_->shape()[0];
-
-        int m = outSize;
-        int n = batch * tokens;
-        int k = inSize;
-
-        float* A = (float *)w->data();
-        float* B = (float *)x->data();
-        float* C = (float *)y->data();
-
-        float alpha = 1.0;
-        float beta = 0.0;
+        void* A = w_->cuda_float()->data();
+        void* B = data();
+        void* C = y_->cuda_float()->data();
 
         cuda::LtSgemm(ComputingContext::cublasLt_handle,
                 CUBLAS_OP_T, CUBLAS_OP_N,
                 m, n, k,
-                &alpha, A, k,
-                B, k, &beta,
-                C, m,
+                &alpha, A, CUDA_R_32F, k,
+                B, CUDA_R_32F, k, &beta,
+                C, CUDA_R_32F, m,
                 ComputingContext::cuda_workspace,
                 ComputingContext::workspace_size);
 
         if ( b_ != nullptr ) {
-            auto b = b_->cuda_float();
-            void* bias = b->data();
+            auto ydesc = y_->cuda_float()->create_cudnn_td_with({batch, 1, tokens, outSize});
+            auto bdesc = b_->cuda_float()->create_cudnn_td_with({1, 1, 1, outSize});
+            void* bias = b_->cuda_float()->data();
 
-            auto ydesc = y->create_cudnn_td_with({batch, 1, tokens, outSize});
-            auto bdesc = b->create_cudnn_td_with({1, 1, 1, outSize});
+            beta = 1.0;
+            CUDNN_CHECK( cudnnAddTensor(ComputingContext::cudnn_handle,
+                                        &alpha, bdesc, bias,
+                                        &beta, ydesc, C));
+        }
+        return OP_OK;
+    }
+
+    if ( DT == DataType::FP16 ) {
+        void* A = w_->cuda_fp16()->data();
+        void* B = data();
+        void* C = y_->cuda_fp16()->data();
+
+        cuda::LtSgemm(ComputingContext::cublasLt_handle,
+                CUBLAS_OP_T, CUBLAS_OP_N,
+                m, n, k,
+                &alpha, A, CUDA_R_16F, k,
+                B, CUDA_R_16F, k, &beta,
+                C, CUDA_R_16F, m,
+                ComputingContext::cuda_workspace,
+                ComputingContext::workspace_size);
+
+        if ( b_ != nullptr ) {
+            auto ydesc = y_->cuda_fp16()->create_cudnn_td_with({batch, 1, tokens, outSize});
+            auto bdesc = b_->cuda_fp16()->create_cudnn_td_with({1, 1, 1, outSize});
+            void* bias = b_->cuda_fp16()->data();
 
             beta = 1.0;
             CUDNN_CHECK( cudnnAddTensor(ComputingContext::cudnn_handle,
@@ -650,7 +684,6 @@ ComputingReturn  CUDATensor<DT>::op_qk(tensor_t self, tensor_t k_, tensor_t qk_)
         float alpha = 1.0 / sqrt(hhidden);
         float beta = 0.0;
 
-#if 1
         int HT = hhidden * tokens ;
         int TT = tokens * tokens;
 
@@ -661,26 +694,12 @@ ComputingReturn  CUDATensor<DT>::op_qk(tensor_t self, tensor_t k_, tensor_t qk_)
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_T, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, k,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, k,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
         }
-#else
-        float* B = (float *)data();
-        float* A = (float *)(k_->cuda_float()->data());
-        float* C = (float *)(qk_->cuda_float()->data());
-        kernels::LtSgemmBatched(ComputingContext::cublasLt_handle,
-                CUBLAS_OP_T, CUBLAS_OP_N,
-                m, n, k,
-                &alpha, A, k,
-                B, k, &beta,
-                C, m,
-                batch * heads,
-                ComputingContext::cuda_workspace,
-                ComputingContext::workspace_size);
-#endif
 
         return OP_OK;
     }
@@ -761,9 +780,9 @@ ComputingReturn  CUDATensor<DT>::op_attn(tensor_t self, tensor_t value_, tensor_
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, m,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, m,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
         }
@@ -840,9 +859,9 @@ ComputingReturn  CUDATensor<DT>::op_last_logits(tensor_t self, tensor_t mask_,  
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_T, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, k,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, k,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
             }
@@ -937,9 +956,9 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                             CUBLAS_OP_T, CUBLAS_OP_N,
                             m, n, k,
-                            &alpha, A, k,
-                            B, k, &beta,
-                            C, m,
+                            &alpha, A, CUDA_R_32F,  k,
+                            B, CUDA_R_32F, k, &beta,
+                            C, CUDA_R_32F, m,
                             ComputingContext::cuda_workspace,
                             ComputingContext::workspace_size);
 
@@ -961,9 +980,9 @@ std::variant<ComputingReturn, float> CUDATensor<DT>::op_loss_backward(tensor_t s
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                             CUBLAS_OP_N, CUBLAS_OP_N,
                             m, n, k,
-                            &alpha, A, m,
-                            B, k, &beta,
-                            C, m,
+                            &alpha, A, CUDA_R_32F,  m,
+                            B, CUDA_R_32F, k, &beta,
+                            C, CUDA_R_32F, m,
                             ComputingContext::cuda_workspace,
                             ComputingContext::workspace_size);
 
@@ -1234,9 +1253,9 @@ ComputingReturn CUDATensor<DT>::op_linear_backward(tensor_t self, tensor_t x, te
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_T,
                     m, n, k,
-                    &alpha, A, m,
-                    B, n, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, m,
+                    B, CUDA_R_32F, n, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
         }
@@ -1256,9 +1275,9 @@ ComputingReturn CUDATensor<DT>::op_linear_backward(tensor_t self, tensor_t x, te
             cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, m,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, m,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
         }
@@ -1313,9 +1332,9 @@ ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, t
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_T,
                     m, n, k,
-                    &alpha, A, m,
-                    B, n, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F, m,
+                    B, CUDA_R_32F, n, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
             }
@@ -1333,9 +1352,9 @@ ComputingReturn CUDATensor<DT>::op_attn_backward(tensor_t self, tensor_t attn, t
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_T, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, k,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F,  k,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
             }
@@ -1407,9 +1426,9 @@ ComputingReturn CUDATensor<DT>::op_softmax_attn_backward(tensor_t self, tensor_t
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_T,
                     m, n, k,
-                    &alpha, A, m,
-                    B, n, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F,  m,
+                    B, CUDA_R_32F, n, &beta,
+                    C, CUDA_R_32F, m,
                     wp, wp_size);
             }
 
@@ -1433,9 +1452,9 @@ ComputingReturn CUDATensor<DT>::op_softmax_attn_backward(tensor_t self, tensor_t
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_T, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, k,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A , CUDA_R_32F, k,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     wp, wp_size);
             }
 
@@ -1488,9 +1507,9 @@ op_qk_backward(tensor_t self, tensor_t query, tensor_t key, tensor_t query_g, te
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_N,
                     m, n, k,
-                    &alpha, A, m,
-                    B, k, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F,  m,
+                    B, CUDA_R_32F, k, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
             }
@@ -1507,9 +1526,9 @@ op_qk_backward(tensor_t self, tensor_t query, tensor_t key, tensor_t query_g, te
                 cuda::LtSgemm(ComputingContext::cublasLt_handle,
                     CUBLAS_OP_N, CUBLAS_OP_T,
                     m, n, k,
-                    &alpha, A, m,
-                    B, n, &beta,
-                    C, m,
+                    &alpha, A, CUDA_R_32F,  m,
+                    B, CUDA_R_32F, n, &beta,
+                    C, CUDA_R_32F, m,
                     ComputingContext::cuda_workspace,
                     ComputingContext::workspace_size);
 

@@ -59,12 +59,12 @@ void LtSgemm(cublasLtHandle_t ltHandle,
              int n,
              int k,
              const float *alpha, /* host pointer */
-             const float *A,
+             const void *A, cudaDataType_t at,
              int lda,
-             const float *B,
+             const void *B, cudaDataType_t bt, 
              int ldb,
              const float *beta, /* host pointer */
-             float *C,
+             void *C, cudaDataType_t ct,
              int ldc,
              void *workspace,
              size_t workspaceSize) {
@@ -82,9 +82,9 @@ void LtSgemm(cublasLtHandle_t ltHandle,
     checkCublasStatus(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &transb, sizeof(transa)));
 
     // create matrix descriptors, we are good with the details here so no need to set any extra attributes
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Adesc, CUDA_R_32F, transa == CUBLAS_OP_N ? m : k, transa == CUBLAS_OP_N ? k : m, lda));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Bdesc, CUDA_R_32F, transb == CUBLAS_OP_N ? k : n, transb == CUBLAS_OP_N ? n : k, ldb));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_32F, m, n, ldc));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Adesc, at, transa == CUBLAS_OP_N ? m : k, transa == CUBLAS_OP_N ? k : m, lda));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Bdesc, bt, transb == CUBLAS_OP_N ? k : n, transb == CUBLAS_OP_N ? n : k, ldb));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, ct, m, n, ldc));
 
     // create preference handle; here we could use extra attributes to disable tensor ops or to make sure algo selected
     // will work with badly aligned A, B, C; here for simplicity we just assume A,B,C are always well aligned (e.g.

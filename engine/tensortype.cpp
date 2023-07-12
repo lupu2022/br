@@ -20,12 +20,17 @@ ComputingReturn TensorType::op_fill(tensor_t self, float value) {
 
 ComputingReturn TensorType::op_alibi(tensor_t self) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(shape().dim() == 4, "alibi shape: [1, heads, 1, len]");
+    br_assert(shape()[0] == 1, "alibi shape: [1, heads, 1, len]");
+    br_assert(shape()[2] == 1, "alibi shape: [1, heads, 1, len]");
     auto ret = impl()->op_alibi(self);
     op_check(ret, "alibi");
 }
 
 ComputingReturn TensorType::op_rotary_cache(tensor_t self, float base) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(shape().dim() == 3, "rotary_cache shape: [lens, hiddens, 2]");
+    br_assert(shape()[2] == 2, "rotary_cache shape: [lens, hiddens, 2]");
     auto ret = impl()->op_rotary_cache(self, base);
     op_check(ret, "rotary_cache");
 }
