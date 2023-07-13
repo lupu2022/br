@@ -60,7 +60,6 @@
     ("query_key_value.weight" @ ("HIDDEN_SIZE" @ dup *)       "HIDDEN_SIZE" @ dup 2 op.view)    "key.weight" !
     ("query_key_value.weight" @ ("HIDDEN_SIZE" @ dup * 2 *) "HIDDEN_SIZE" @ dup 2 op.view)    "value.weight" !
     
-    ("HEADS_NUM" @ 2 * 1 $DEVICE @  $DTYPE @)  op.create  "rotary_emb.inv_freq" !
     ("HIDDEN_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "o_proj.weight"  !
 
     ("INTERMEDIATE_SIZE" @  "HIDDEN_SIZE" @ 2 $DEVICE @  $DTYPE @)  op.create    "gate_proj.weight"  !
@@ -126,12 +125,6 @@
     }
     
     {
-        "rotary_emb.inv_freq" @
-        $weights_path @  ".self_attn.rotary_emb.inv_freq.bin" | 
-        io.load
-    }
-
-    {
         "o_proj.weight" @
         $weights_path @  ".self_attn.o_proj.weight.bin" | 
         io.load
@@ -174,10 +167,6 @@
     0 #     "post_attention_layernorm.weight" !
     
     dup  
-    #       "rotary_emb.inv_freq" @
-    0 #     "rotary_emb.inv_freq" !
-    
-    dup  
     #       "o_proj.weight" @
     0 #     "o_proj.weight" !
     
@@ -205,10 +194,6 @@
     dup
     0 #        "post_attention_layernorm.weight" @
     swap #     "post_attention_layernorm.weight" @  op.copy
-    
-    dup
-    0 #        "rotary_emb.inv_freq" @
-    swap #     "rotary_emb.inv_freq" @ op.copy
     
     dup
     0 #        "o_proj.weight" @

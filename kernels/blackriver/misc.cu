@@ -171,6 +171,49 @@ int rotary_embed<float>( const float *in, const float *cos_sin, const int* mask,
     return 0;
 }
 
+__global__ void rotary_embed_fp16(const __half *in, const __half *cos_sin, const int *mask, __half *out, 
+                                   const int bs, const int hnum, const int len, const int dims) {
+    int e = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( e >= bs * hnum * len ) {
+        return;
+    }
+    in = in + e * dims;
+    out = out + e * dims;
+
+    int b = e / (hnum * len);
+    int l = e % len;
+
+    int pos = l + b * len;
+    if ( mask[pos] >= 1 ) { 
+        cos_sin = cos_sin + l * dims * 2;
+    }
+    
+    for (int i = 0; i < dims / 2; i++) {
+        int ii = i + dims/2;
+        __half x = in[i];
+        __half y = in[ii];
+        out[i] = cos_sin[i*2] * x - cos_sin[i*2+1] * y;
+        out[ii] = cos_sin[ii*2] * y + cos_sin[ii*2+1] * x;
+    }
+}
+
+template<>
+int rotary_embed<__half>( const __half *in, const __half *cos_sin, const int* mask, __half *out, 
+                         const int bs, const int hnum, const int len, const int dims, cudaStream_t stream) {
+    dim3 block_size(256);
+	dim3 num_of_blocks( (bs*hnum*len + block_size.x - 1) / block_size.x);
+   
+    rotary_embed_fp16 <<< num_of_blocks, block_size, 0, stream >>> (in, cos_sin, mask, out, bs, hnum, len, dims);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Failed to launch  rotary_embed_fp16 kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+    return 0;
+}
+
+
 //----------------
 __global__ void silu_product_float(const float *in_act, const float *in, float *out, const int items) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;

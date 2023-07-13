@@ -720,27 +720,41 @@ ComputingReturn CUDATensor<DT>::op_rotary_embed(tensor_t self, tensor_t cached, 
 
         return OP_OK;
     }
+    if ( DT == DataType::FP16 ) {
+        device_fp16_t* in = (device_fp16_t *)data();
+        device_fp16_t* cos_sin = (device_fp16_t *)cached->cuda_fp16()->data();
+        device_fp16_t* out = (device_fp16_t *)y->cuda_fp16()->data();
+        int* m = (int *)mask->cuda_int()->data();
+
+        auto stream = ComputingContext::cuda_stream;
+        cuda::rotary_embed<device_fp16_t>(in, cos_sin, m, out, batch, heads, tokens, hidden, stream);
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
-
 template<DataType DT>
 ComputingReturn  CUDATensor<DT>::op_transpos_0213(tensor_t self, tensor_t y) {
+    auto x = this;
+    auto stream = ComputingContext::cuda_stream;
+
+    int sz0 = self->shape()[0];
+    int sz1 = self->shape()[1];
+    int sz2 = self->shape()[2];
+    int sz3 = self->shape()[3];
+
     if ( DT == DataType::Float ) {
-        auto x = this;
-
-        int sz0 = self->shape()[0];
-        int sz1 = self->shape()[1];
-        int sz2 = self->shape()[2];
-        int sz3 = self->shape()[3];
-
         auto out = y->cuda_float();
-
-        auto stream = ComputingContext::cuda_stream;
         lightseq::cuda::launch_transform_0213<float>((float *)x->data(), (float *)out->data(), sz0, sz1, sz2, sz3, stream);
-
         return OP_OK;
     }
+    if ( DT == DataType::FP16 ) {
+        auto out = y->cuda_fp16();
+        lightseq::cuda::launch_transform_0213<device_fp16_t>((device_fp16_t *)x->data(), (device_fp16_t *)out->data(), sz0, sz1, sz2, sz3, stream);
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 
@@ -781,6 +795,7 @@ ComputingReturn  CUDATensor<DT>::op_qk(tensor_t self, tensor_t k_, tensor_t qk_)
 
         return OP_OK;
     }
+
     return OP_TODO_ERROR;
 }
 

@@ -693,7 +693,6 @@ def dump_binary_fp32():
         sdict = torch.load(path_src + name + ".pth");
         dump_layer_one_file(sdict, name, "self_attn.W_pack.weight");
         dump_layer_one_file(sdict, name, "self_attn.o_proj.weight");
-        dump_layer_one_file(sdict, name, "self_attn.rotary_emb.inv_freq");
         dump_layer_one_file(sdict, name, "mlp.gate_proj.weight");
         dump_layer_one_file(sdict, name, "mlp.down_proj.weight");
         dump_layer_one_file(sdict, name, "mlp.up_proj.weight");
