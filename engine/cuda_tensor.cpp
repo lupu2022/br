@@ -656,44 +656,49 @@ ComputingReturn CUDATensor<DT>::op_rmsnorm(tensor_t self, tensor_t scale, tensor
     size_t tokens = self->shape()[1];
     size_t hidden = self->shape()[2];
 
-    if ( DT == DataType::Float ) {
-        // do norm2 reduce
-        {
-            cudnnReduceTensorDescriptor_t reduceDesc;
-
-            CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
-            CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
-                                                        CUDNN_REDUCE_TENSOR_NORM2, CUDNN_DATA_FLOAT,
-                                                        CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_NO_INDICES, CUDNN_32BIT_INDICES) );
-            float alpha = 1.0 / sqrt( (float)hidden );
-            float beta = 0.0;
-            auto  adesc = create_cudnn_td_with({batch * tokens, hidden, 1, 1});
-            auto  cdesc = create_cudnn_td_with({batch * tokens, 1,      1, 1});
-            void* a = data();
-            void* c = norm2->cuda_float()->data();
-
-            CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
-                                reduceDesc,
-                                nullptr, 0,
-                                br::ComputingContext::cuda_workspace, br::ComputingContext::workspace_size,
-                                &alpha, adesc, a, &beta, cdesc, c) );
-            CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
-        }
-
-        // do reverse sqrt
-        {
-            float* inout = (float *)norm2->cuda_float()->data();
-            auto stream = ComputingContext::cuda_stream;
-            cuda::rsqrt(inout, inout, norm2->items(), eps, stream);
-        }
-
-        // do scale
-        self->op_mul(self, norm2, y);
-        y->op_mul(y, scale, y);
-
-        return OP_OK;
+    if ( DT != DataType::Float && DT != DataType::FP16) {
+        return OP_TODO_ERROR;
     }
-    return OP_TODO_ERROR;
+
+    // do norm2 reduce
+    {
+        cudnnReduceTensorDescriptor_t reduceDesc;
+
+        CUDNN_CHECK( cudnnCreateReduceTensorDescriptor(&reduceDesc) );
+        CUDNN_CHECK( cudnnSetReduceTensorDescriptor(reduceDesc,
+                                                    CUDNN_REDUCE_TENSOR_NORM2, CUDNN_DATA_FLOAT,
+                                                    CUDNN_PROPAGATE_NAN, CUDNN_REDUCE_TENSOR_NO_INDICES, CUDNN_32BIT_INDICES) );
+        float alpha = 1.0 / sqrt( (float)hidden );
+        float beta = 0.0;
+        auto  adesc = create_cudnn_td_with({batch * tokens, hidden, 1, 1});
+        auto  cdesc = create_cudnn_td_with({batch * tokens, 1,      1, 1});
+        void* a = data();
+        void* c = norm2->device_data(self->impl_index());
+
+        CUDNN_CHECK( cudnnReduceTensor(ComputingContext::cudnn_handle,
+                            reduceDesc,
+                            nullptr, 0,
+                            br::ComputingContext::cuda_workspace, br::ComputingContext::workspace_size,
+                            &alpha, adesc, a, &beta, cdesc, c) );
+        CUDNN_CHECK( cudnnDestroyReduceTensorDescriptor(reduceDesc) );
+    }
+
+    // do reverse sqrt
+    if ( DT == DataType::Float) {
+        float* inout = (float *)norm2->cuda_float()->data();
+        auto stream = ComputingContext::cuda_stream;
+        cuda::rsqrt<float>(inout, inout, norm2->items(), eps, stream);
+    }
+    if ( DT == DataType::FP16) {
+        device_fp16_t* inout = (device_fp16_t *)norm2->cuda_fp16()->data();
+        auto stream = ComputingContext::cuda_stream;
+        cuda::rsqrt<device_fp16_t>(inout, inout, norm2->items(), eps, stream);
+    }
+
+    // do scale
+    self->op_mul(self, norm2, y);
+    y->op_mul(y, scale, y);
+    return OP_OK;
 }
 
 template<DataType DT>

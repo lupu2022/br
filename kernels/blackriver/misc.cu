@@ -102,6 +102,32 @@ int rsqrt<float>(const float *in, float *out, const int len, float eps, cudaStre
     return 0;
 }
 
+__global__ void rsqrt_fp16(const __half *in, __half *out, const int len, float eps) {
+    int e = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( e >= len ) {
+        return;
+    }
+
+    float ine = __half2float(in[e]);
+
+    out[e] = __float2half( sqrt(1.0 / (ine*ine + eps)) );
+}
+
+template<>
+int rsqrt<__half>(const __half *in, __half *out, const int len, float eps, cudaStream_t stream) {
+    dim3 block_size(256);
+	dim3 num_of_blocks((len + block_size.x - 1) / block_size.x);
+  
+    rsqrt_fp16 <<< num_of_blocks, block_size, 0, stream >>> (in, out, len, eps);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Failed to launch reverse_float kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+    return 0;
+}
+
 //----------------
 __global__ void rotary_embed_float(const float *in, const float *cos_sin, const int *mask, float *out, 
                                    const int bs, const int hnum, const int len, const int dims) {

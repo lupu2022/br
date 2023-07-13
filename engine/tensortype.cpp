@@ -142,12 +142,23 @@ ComputingReturn TensorType::op_linear(tensor_t self, tensor_t w, tensor_t b, ten
 
 ComputingReturn TensorType::op_layernorm(tensor_t self, tensor_t mean, tensor_t var, tensor_t scale, tensor_t bias, tensor_t y, float eps) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(mean->shape().dim() == 1, "layernorm size error!");
+    br_assert(var->shape().dim() == 1, "layernorm size error!");
+    br_assert(scale->shape().dim() == 1, "layernorm size error!");
+    br_assert(bias->shape().dim() == 1, "layernorm size error!");
+    br_assert(y->shape() == self->shape(), "layernorm size error!");
+    br_assert(self->shape()[-1] == mean->shape()[0] , "layernorm size error!");
     auto ret = impl()->op_layernorm(self, mean, var, scale, bias, y, eps);
     op_check(ret, "layernorm");
 }
 
 ComputingReturn TensorType::op_rmsnorm(tensor_t self, tensor_t scale, tensor_t norm2, tensor_t y, float eps) {
     br_assert(self.get() == this, "can't be here!");
+    br_assert(scale->shape().dim() == 3, "rmsnorm size error!");
+    br_assert(norm2->shape().dim() == 3, "rmsnorm size error!");
+    br_assert(self->shape().dim() == 3, "rmsnorm size error!");
+    br_assert(y->shape() == self->shape(), "rmsnorm size error!");
+    br_assert(self->shape()[-1] == scale->shape()[-1] , "rmsnorm size error!");
     auto ret = impl()->op_rmsnorm(self, scale, norm2, y, eps);
     op_check(ret, "rmsnorm");
 }
@@ -373,7 +384,34 @@ TransformerComputing* TensorType::impl() {
     return nullptr;
 }
 
-
+void* TensorType::device_data(size_t index) {
+    if ( index == ImplType::CUDA_FLOAT ) {
+        cuda_float_t* tensor = std::get<CUDA_FLOAT>(impl_);
+        return tensor->data();
+    }
+    if ( index == ImplType::CUDA_INT ) {
+        cuda_int_t* tensor = std::get<CUDA_INT>(impl_);
+        return tensor->data();
+    }
+    if ( index == ImplType::CUDA_FP16 ) {
+        cuda_fp16_t* tensor = std::get<CUDA_FP16>(impl_);
+        return tensor->data();
+    }
+    if ( index == ImplType::CPU_FLOAT ) {
+        cpu_float_t* tensor = std::get<CPU_FLOAT>(impl_);
+        return tensor->data();
+    }
+    if ( index == ImplType::CPU_INT ) {
+        cpu_int_t* tensor = std::get<CPU_INT>(impl_);
+        return tensor->data();
+    }
+    if ( index == ImplType::CPU_FP16 ) {
+        cpu_fp16_t* tensor = std::get<CPU_FP16>(impl_);
+        return tensor->data();
+    }
+    br_panic("Can't be here!");
+    return nullptr;
+}
 
 }
 

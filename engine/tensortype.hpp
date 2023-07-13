@@ -98,8 +98,11 @@ public:
     const size_t dim() const {
         return dims_.size();
     }
-    const size_t operator[](size_t i) const {
-        if ( i >= dims_.size() ) {
+    const size_t operator[](int i) const {
+        if ( i < 0) {
+            i = (int)dims_.size() + i;
+        }
+        if ( i >= (int)dims_.size() || i < 0 ) {
             br_panic("Access shape out of dims");
         }
         return dims_[i];
@@ -285,6 +288,7 @@ public:
     }
 
     TransformerComputing* impl();
+    void* device_data(size_t index);
 
 public:
     ComputingReturn op_zero(tensor_t self) override;
