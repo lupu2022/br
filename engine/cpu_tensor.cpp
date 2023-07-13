@@ -167,7 +167,6 @@ ComputingReturn CPUTensor<_DTYPE_>::io_save(tensor_t self, const char* fileName)
 
 template <DataType _DTYPE_>
 ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName) {
-    if ( _DTYPE_ == DataType::Float || _DTYPE_ == DataType::Int) {
         const size_t count = 64;
         std::ifstream inf(fileName, std::ios::binary);
         if ( ! inf.is_open() ) {
@@ -188,36 +187,14 @@ ComputingReturn CPUTensor<_DTYPE_>::io_load(tensor_t self, const char* fileName)
                 inf.read( (char *)src , sizeof(int) * count);
             }
         }
-        inf.close();
-        return OP_OK;
-    }
-
-    if ( _DTYPE_ == DataType::FP16 ) {
-        const size_t count = 64;
-        std::ifstream inf(fileName, std::ios::binary);
-        if ( ! inf.is_open() ) {
-            std::cout << "Can't open " << fileName << std::endl;
-            br_panic("Can't open file");
-        }
-
-        br_assert( self->items() % count == 0, "Only support block read");
-
-        std::vector<float> buffer;
-        buffer.resize(count);
-
-        local_fp16_t* src = (local_fp16_t *)data();
-        for(size_t i = 0; i < self->items() / count; i++) {
-            inf.read( (char *)buffer.data() , sizeof(float) * count);
-            for (int j = 0; j < count; j++) {
-                src[i * count + j] = fp32_to_fp16(buffer[j]);
+        if (_DTYPE_ == DataType::FP16) {
+            for(size_t i = 0; i < self->items() / count; i++) {
+                local_fp16_t* src = (local_fp16_t *)data() + i * count;
+                inf.read( (char *)src , sizeof(local_fp16_t) * count);
             }
         }
-
         inf.close();
         return OP_OK;
-    }
-
-    return OP_TODO_ERROR;
 }
 
 template <DataType _DTYPE_>

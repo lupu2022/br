@@ -671,6 +671,43 @@ class BaiChuanForCausalLM(PreTrainedModel):
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
 
+def dump_binary_fp16():
+    path_src = "pth/"
+    path_dst = "weights/"
+
+    def dump_one_file(name):
+        print("Dumping ..." + name );
+        sdict = torch.load(path_src + name + ".pth");
+        vdata = sdict["weight"].cpu().float().numpy().flatten().astype('float16')
+        vdata.tofile(path_dst + name + ".fp16");
+
+    def dump_layer_one_file(sdict, hname, blkname):
+        vdata = sdict[blkname];
+        vdata = vdata.cpu().float().numpy().flatten().astype('float16');
+        outname = path_dst + hname + "." + blkname + ".fp16";
+        vdata.tofile(outname);
+
+    def dump_layer_files(name, with_bias = False):
+        print("Dumping ..." + name );
+        sdict = torch.load(path_src + name + ".pth");
+        dump_layer_one_file(sdict, name, "self_attn.W_pack.weight");
+        dump_layer_one_file(sdict, name, "self_attn.o_proj.weight");
+        dump_layer_one_file(sdict, name, "mlp.gate_proj.weight");
+        dump_layer_one_file(sdict, name, "mlp.down_proj.weight");
+        dump_layer_one_file(sdict, name, "mlp.up_proj.weight");
+        dump_layer_one_file(sdict, name, "input_layernorm.weight");
+        dump_layer_one_file(sdict, name, "post_attention_layernorm.weight");
+        return;
+
+
+    ### dump embedded and output
+    dump_one_file( "embed_tokens");
+    dump_one_file( "norm");
+    dump_one_file( "lm_head");
+
+    for i in range(0, 32):
+        hname = "h_" + str(i);
+        dump_layer_files(hname);
 
 def dump_binary_fp32():
     path_src = "pth/"
