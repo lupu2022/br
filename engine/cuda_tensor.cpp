@@ -319,7 +319,7 @@ ComputingReturn CUDATensor<DT>::op_rotary_cache(tensor_t self, float base) {
             }
         }
         auto stream = ComputingContext::cuda_stream;
-        CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(float), cudaMemcpyHostToDevice, stream));
+        CUDA_CHECK(cudaMemcpyAsync( data(), cos_sin.data(), self->items() * sizeof(local_fp16_t), cudaMemcpyHostToDevice, stream));
         return OP_OK;
     }
     return OP_OUTPUT_ERROR;
@@ -478,6 +478,28 @@ std::variant<ComputingReturn, tensor_t> CUDATensor<DT>::op_view(tensor_t self, s
     return OP_TODO_ERROR;
 }
 
+template<DataType _DT_>
+std::variant<ComputingReturn, tensor_t> CUDATensor<_DT_>::op_clone(tensor_t self, const std::vector<size_t>& newShape_, const char* dtype) {
+    DataType DT = DataType_from(dtype);
+
+    ShapeType newShape(newShape_);
+    void *newData = data();
+
+    if ( DT == DataType::Float ) {
+        auto* newCudaTensor = new CUDATensor<DataType::Float>(newData);
+        return std::make_shared<TensorType>(newCudaTensor, newShape);
+    }
+    if ( DT == DataType::Int ) {
+        auto* newCudaTensor = new CUDATensor<DataType::Int>(newData);
+        return std::make_shared<TensorType>(newCudaTensor, newShape);
+    }
+    if ( DT == DataType::FP16 ) {
+        auto* newCudaTensor = new CUDATensor<DataType::FP16>(newData);
+        return std::make_shared<TensorType>(newCudaTensor, newShape);
+    }
+    return OP_TODO_ERROR;
+}
+
 template <DataType _DTYPE_>
 ComputingReturn CUDATensor<_DTYPE_>::op_embed(tensor_t self, tensor_t table, tensor_t outspace) {
     size_t batch = self->shape()[0];
@@ -584,8 +606,6 @@ ComputingReturn CUDATensor<DT>::op_mul(tensor_t self, tensor_t b, tensor_t c) {
     }
 
     return OP_TODO_ERROR;
-
-    return OP_TODO_ERROR;
 }
 
 template<DataType DT>
@@ -608,6 +628,25 @@ ComputingReturn CUDATensor<DT>::op_layernorm(tensor_t self, tensor_t mean, tenso
 
         return OP_OK;
     }
+    if ( DT == DataType::FP16 ) {
+        auto x = this;
+        size_t batch = self->shape()[0] * self->shape()[1];
+        size_t hidden = self->shape()[2];
+
+        auto m = mean->cuda_fp16();
+        auto v = var->cuda_fp16();
+        auto s = scale->cuda_fp16();
+        auto b = bias->cuda_fp16();
+        auto out = y->cuda_fp16();
+
+        // TODO using eps inside kernel
+        auto stream = ComputingContext::cuda_stream;
+        lightseq::cuda::launch_layer_norm<__half>((__half *)out->data(), (__half *)v->data(), (__half *)m->data(),
+                                 (__half *)x->data(), (__half *)s->data(), (__half *)b->data(), batch, hidden, stream);
+
+        return OP_OK;
+    }
+
     return OP_TODO_ERROR;
 }
 

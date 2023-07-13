@@ -84,6 +84,23 @@ std::variant<ComputingReturn, tensor_t> TensorType::op_view(tensor_t self, size_
     return result;
 }
 
+std::variant<ComputingReturn, tensor_t> TensorType::op_clone(tensor_t self, const std::vector<size_t>& newShape_, const char* dtype_) {
+    br_assert(self.get() == this, "can't be here!");
+    DataType dt = DataType_from( dtype_ );
+
+    ShapeType shape(newShape_);
+    if ( shape.numel() * DataType_size(dt) != items() * DataType_size( dtype() ) ) {
+        br_panic("op_clone must has same memory size!");
+    }
+
+    auto result = impl()->op_clone(self, newShape_, dtype_);
+    if ( result.index() == 0) {
+        ComputingReturn ret = std::get<0>(result);
+        op_check(ret, "clone");
+    }
+    return result;
+}
+
 ComputingReturn TensorType::op_embed(tensor_t self, tensor_t table, tensor_t out) {
     br_assert(self.get() == this, "can't be here!");
     br_assert(self->dtype() == DataType::Int, "token id must be Int");

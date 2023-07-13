@@ -71,6 +71,9 @@ struct TransformerComputing {
     virtual std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) {
         return OP_TODO_ERROR;
     }
+    virtual std::variant<ComputingReturn, tensor_t> op_clone(tensor_t self, const std::vector<size_t>& newShape, const char* dtype) {
+        return OP_TODO_ERROR;
+    }
     virtual ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t output) {
         return OP_TODO_ERROR;
     }

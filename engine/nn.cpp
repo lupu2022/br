@@ -129,6 +129,17 @@ namespace nn {
         NWORD_CREATOR_DEFINE_LR(View)
     };
 
+    struct Clone : public NativeWord {
+        void run(Stack& stack) override {
+            auto dtype = stack.pop_string();
+            auto shape = fetch_shape(stack);
+            tensor_t t = stack.pop_tensor();
+            auto ret = t->op_clone(t, shape, dtype.c_str());
+            stack.push_tensor( std::get<1>(ret) );
+        }
+        NWORD_CREATOR_DEFINE_LR(Clone)
+    };
+
     struct Embed : public NativeWord {
         void run(Stack& stack) override {
             auto out = stack.pop_tensor();
@@ -549,6 +560,7 @@ void load_nn_words(Enviroment& env) {
     env.insert_native_word("op.causal_mask", nn::CausalMask::creator );
     env.insert_native_word("op.scale", nn::Scale::creator );
     env.insert_native_word("op.view", nn::View::creator );
+    env.insert_native_word("op.clone", nn::Clone::creator );
     env.insert_native_word("op.embed", nn::Embed::creator );
     env.insert_native_word("op.copy", nn::Copy::creator );
     env.insert_native_word("op.linear", nn::Linear::creator );

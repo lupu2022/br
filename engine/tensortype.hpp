@@ -19,6 +19,23 @@ enum DataType {
     Int = 3,
 };
 
+inline DataType DataType_from(const char* dtype) {
+    if ( strcmp(dtype, "float") == 0) {
+        return DataType::Float;
+    }
+    if ( strcmp(dtype, "fp16") == 0) {
+        return DataType::FP16;
+    }
+    if ( strcmp(dtype, "bf16") == 0) {
+        return DataType::BF16;
+    }
+    if ( strcmp(dtype, "int") == 0) {
+        return DataType::Int;
+    }
+    br_panic("Can't be here");
+    return DataType::Float;
+}
+
 inline size_t DataType_size(DataType type_) {
     switch( type_ ) {
         case Int:
@@ -37,7 +54,7 @@ inline size_t DataType_size(DataType type_) {
 inline const char* DataType_name(DataType type_) {
     switch( type_ ) {
         case Float:
-            return "f32";
+            return "float";
         case FP16:
             return "f16";
         case BF16:
@@ -277,6 +294,7 @@ public:
     ComputingReturn op_causal_mask(tensor_t self, tensor_t out) override;
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    std::variant<ComputingReturn, tensor_t> op_clone(tensor_t self, const std::vector<size_t>& newShape, const char* dtype) override;
     ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
     ComputingReturn op_scale(tensor_t self, float scale) override;
     ComputingReturn op_add(tensor_t self, tensor_t b, tensor_t c) override;

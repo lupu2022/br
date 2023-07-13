@@ -67,6 +67,7 @@ struct CUDATensor : public TransformerComputing {
     ComputingReturn op_causal_mask(tensor_t self, tensor_t out) override;
     ComputingReturn op_rotary_cache(tensor_t self, float base) override;
     std::variant<ComputingReturn, tensor_t> op_view(tensor_t self, size_t offset, const std::vector<size_t>& newShape) override;
+    std::variant<ComputingReturn, tensor_t> op_clone(tensor_t self, const std::vector<size_t>& newShape, const char* dtype) override;
     ComputingReturn op_embed(tensor_t self, tensor_t table, tensor_t out) override;
     ComputingReturn op_copy(tensor_t self, tensor_t src) override;
     ComputingReturn op_scale(tensor_t self, float scale) override;
